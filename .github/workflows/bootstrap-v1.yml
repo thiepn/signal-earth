@@ -1,0 +1,65 @@
+name: Bootstrap Signal Earth V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/bootstrap-v1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-v1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out bootstrap repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download Signal Earth V1 archive
+        shell: bash
+        env:
+          DRIVE_FILE_ID: 1aj5bzN89ErYRyzBoKgCZFbhBpODbExdh
+        run: |
+          set -euo pipefail
+          URL="https://drive.usercontent.google.com/download?id=${DRIVE_FILE_ID}&export=download&confirm=t"
+          curl --fail --location --retry 3 --retry-delay 2 "$URL" -o /tmp/signal-earth-v1.zip
+          test -s /tmp/signal-earth-v1.zip
+          file /tmp/signal-earth-v1.zip
+          unzip -tq /tmp/signal-earth-v1.zip
+
+      - name: Unpack V1
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/signal-earth-v1
+          mkdir -p /tmp/signal-earth-v1
+          unzip -q /tmp/signal-earth-v1.zip -d /tmp/signal-earth-v1
+          test -f /tmp/signal-earth-v1/signal-earth-phase15/package.json
+          test -f /tmp/signal-earth-v1/signal-earth-phase15/src/main.tsx
+
+      - name: Replace bootstrap repository with V1 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a /tmp/signal-earth-v1/signal-earth-phase15/. .
+          git status --short
+
+      - name: Commit V1 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "release: import Signal Earth v1.0.0"
+          git push origin HEAD:main
