@@ -1,0 +1,38 @@
+{
+  "name": "signal-earth",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A time-aware browser observatory for Earth, orbit, space weather, and the observer.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/inject-precache.mjs",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "certify": "npm run typecheck && npm test && npm run build",
+    "release:verify": "node scripts/release-verify.mjs",
+    "release": "npm run certify && npm run release:verify"
+  },
+  "dependencies": {
+    "globe.gl": "2.46.2",
+    "idb": "8.0.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "satellite.js": "7.1.0",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/three": "0.185.4",
+    "@vitejs/plugin-react": "6.1.1",
+    "typescript": "6.0.3",
+    "vite": "8.3.0",
+    "vitest": "5.0.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

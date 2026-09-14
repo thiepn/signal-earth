@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "Signal Earth",
+  "short_name": "Signal Earth",
+  "description": "A time-aware browser observatory for Earth, orbit, space weather, and the observer.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#02050a",
+  "theme_color": "#02050a",
+  "categories": ["education", "utilities"],
+  "icons": [
+    { "src": "./icons/signal-earth-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/signal-earth-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/signal-earth-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Open Signal Earth", "short_name": "Open", "url": "./" }
+  ]
+}
