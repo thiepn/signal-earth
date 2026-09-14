@@ -35,8 +35,8 @@ export interface ObserverSkySatellite {
   rangeKm: number;
   altitudeKm: number;
   speedKmS: number;
-  /** 0 = fully sunlit, 1 = full Earth umbra, intermediate = penumbra. */
-  shadowFraction: number;
+  /** Optional future-ready illumination context: 0 = sunlit, 1 = full Earth umbra. */
+  shadowFraction?: number;
 }
 
 export interface ObserverSkySnapshot {
@@ -55,7 +55,7 @@ export interface SatellitePass {
   maxAzimuthDeg: number;
   setAzimuthDeg: number;
   /** Earth-shadow fraction at maximum elevation: 0 = sunlit, 1 = umbra. */
-  maxShadowFraction: number;
+  maxShadowFraction?: number;
 }
 
 export interface ObserverPassForecast {
