@@ -20,9 +20,11 @@ describe('deterministic search commands', () => {
     expect(parseCommand('rewind 7d')?.intent).toEqual({ type: 'time-offset', hours: -168 });
     expect(parseCommand('forward 7d')?.intent).toEqual({ type: 'time-offset', hours: 24 });
     expect(parseCommand('replay 24h')?.intent).toEqual({ type: 'replay-day' });
+    expect(parseCommand('last 24 hours')?.intent).toEqual({ type: 'replay-day' });
     expect(parseCommand('night')?.intent).toEqual({ type: 'visual-mode', mode: 'night' });
     expect(parseCommand('live')?.intent).toEqual({ type: 'live' });
   });
+
   it('parses release commands', () => {
     expect(parseCommand('share')?.intent).toEqual({ type: 'share' });
     expect(parseCommand('capture')?.intent).toEqual({ type: 'capture' });
@@ -30,10 +32,15 @@ describe('deterministic search commands', () => {
     expect(parseCommand('install app')?.intent).toEqual({ type: 'install' });
   });
 
-  it('parses briefing commands', () => {
+  it('parses static and dynamic briefing commands without colliding with replay', () => {
     expect(parseCommand('briefing')?.intent).toEqual({ type: 'briefings' });
     expect(parseCommand('earth now')?.intent).toEqual({ type: 'briefings', briefingId: 'earth-now' });
+    expect(parseCommand('seismic briefing')?.intent).toEqual({ type: 'briefings', briefingId: 'seismic-now' });
+    expect(parseCommand('active storms briefing')?.intent).toEqual({ type: 'briefings', briefingId: 'storm-watch' });
+    expect(parseCommand('space weather briefing')?.intent).toEqual({ type: 'briefings', briefingId: 'space-weather-now' });
+    expect(parseCommand('above me briefing')?.intent).toEqual({ type: 'briefings', briefingId: 'above-me' });
+    expect(parseCommand('orbit highlights')?.intent).toEqual({ type: 'briefings', briefingId: 'orbit-now' });
+    expect(parseCommand('last 24h briefing')?.intent).toEqual({ type: 'briefings', briefingId: 'last-24h' });
     expect(parseCommand('night earth')?.intent).toEqual({ type: 'briefings', briefingId: 'night-earth' });
   });
-
 });
