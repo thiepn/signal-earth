@@ -5,11 +5,20 @@ import textwrap
 start_marker = "          python <<'PY'\n"
 end_marker = "\n          PY\n\n      - name: Commit Phase 16"
 source = None
-for ref in ('HEAD^', 'HEAD^^', 'HEAD^^^'):
-    candidate = subprocess.check_output(
-        ['git', 'show', f'{ref}:.github/workflows/phase16-implement.yml'],
-        text=True,
-    )
+commits = subprocess.check_output(
+    ['git', 'rev-list', '--max-count=20', 'HEAD'],
+    text=True,
+).splitlines()
+
+for commit in commits[1:]:
+    try:
+        candidate = subprocess.check_output(
+            ['git', 'show', f'{commit}:.github/workflows/phase16-implement.yml'],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
+    except subprocess.CalledProcessError:
+        continue
     if start_marker in candidate and end_marker in candidate:
         source = candidate
         break
