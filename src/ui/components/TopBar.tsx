@@ -36,7 +36,7 @@ export function TopBar({ ready, pointOfView, clock, visualMode, onNow, onSearch,
         <span className="brand-mark" aria-hidden="true"><span /></span>
         <span className="brand-copy">
           <strong>SIGNAL EARTH</strong>
-          <small>{APP_VERSION}</small>
+          <small>OBSERVATORY · {APP_VERSION}</small>
         </span>
       </button>
 
@@ -48,23 +48,31 @@ export function TopBar({ ready, pointOfView, clock, visualMode, onNow, onSearch,
       </div>
 
       <div className="top-bar__actions">
-        <StatusBadge tone={ready ? (isLive ? 'live' : 'warning') : 'muted'}>
-          {ready ? timeStatus : 'STARTING'}
-        </StatusBadge>
-        <span className="utc-readout">{formatUtc(clock?.simulationTime)}</span>
-        <button className="top-action top-action--now" type="button" onClick={onNow} aria-label="Open Signal Earth Now">
-          <span aria-hidden="true">●</span><span className="top-action__label">Now</span>
+        <div className="top-runtime" aria-label={`Simulation ${timeStatus}`}>
+          <StatusBadge tone={ready ? (isLive ? 'live' : 'warning') : 'muted'}>{ready ? timeStatus : 'STARTING'}</StatusBadge>
+          <span className="utc-readout">{formatUtc(clock?.simulationTime)}</span>
+        </div>
+
+        <button className="top-action top-action--primary" type="button" onClick={onNow} aria-label="Open Signal Earth Now">
+          <span className="top-action__live-dot" aria-hidden="true" /><span className="top-action__label">Now</span>
         </button>
-        <button className="top-action" type="button" onClick={onSearch} aria-label="Open search">
-          <span aria-hidden="true">⌕</span><span className="top-action__label">Search</span>
+
+        <button className="top-search-action" type="button" onClick={onSearch} aria-label="Search Signal Earth">
+          <span className="top-search-action__icon" aria-hidden="true">⌕</span>
+          <span className="top-search-action__copy">Search</span>
+          <kbd>/</kbd>
         </button>
-        <button className="top-action top-action--briefing" type="button" onClick={onBriefings} aria-label="Open planetary briefings">
-          <span aria-hidden="true">▶</span><span className="top-action__label">Brief</span>
-        </button>
-        <button className="top-action top-action--here" type="button" onClick={onHere} aria-label="Open Above Me">
-          <span aria-hidden="true">⌖</span><span className="top-action__label">Here</span>
-        </button>
-        <button className="icon-button" type="button" onClick={onSettings} aria-label="Open settings">⋯</button>
+
+        <div className="top-secondary-actions" aria-label="Observatory tools">
+          <button className="top-action top-action--secondary" type="button" onClick={onBriefings} aria-label="Open planetary briefings">
+            <span aria-hidden="true">▶</span><span className="top-action__label">Brief</span>
+          </button>
+          <button className="top-action top-action--secondary" type="button" onClick={onHere} aria-label="Open Above Me">
+            <span aria-hidden="true">⌖</span><span className="top-action__label">Here</span>
+          </button>
+        </div>
+
+        <button className="icon-button top-settings-button" type="button" onClick={onSettings} aria-label="Open settings">⋯</button>
       </div>
     </header>
   );
