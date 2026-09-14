@@ -1,0 +1,27 @@
+name: Verify Signal Earth Phase 19 Patch
+
+on:
+  push:
+    paths:
+      - '.github/workflows/phase19-verify-patch.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Apply Observatory UX 2.0 patch
+        run: |
+          python scripts/phase19_engine.py
+          python scripts/phase19_app.py
+          python scripts/phase19_polish.py
+          git diff --check
+          git diff --stat
+      - run: npm install --no-audit --no-fund
+      - run: npm run release
