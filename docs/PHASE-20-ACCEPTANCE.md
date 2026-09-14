@@ -43,5 +43,5 @@ Turn selected Signal Earth data into understandable, source-grounded context wit
 - [x] Release verification passes with **15** safe service-worker precache entries.
 - [x] Certified branch production package: approximately **13.61 MB**.
 - [x] Clean branch certification passes.
-- [ ] GitHub Pages production deployment succeeds.
+- [x] GitHub Pages production deployment succeeds.
 - [ ] Real-device visual smoke test remains a separate manual acceptance step.
