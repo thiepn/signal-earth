@@ -31,11 +31,13 @@ Make the observer a first-class part of Signal Earth: answer what is happening a
 
 ## Verification
 
-- [ ] TypeScript passes.
-- [ ] **6/6** Above Me 2.0 viewing tests pass.
-- [ ] Full unit-test suite passes.
-- [ ] Production Vite build passes.
-- [ ] Release verification passes with a safe service-worker precache.
-- [ ] Clean branch certification passes.
+- [x] TypeScript passes.
+- [x] **6/6** Above Me 2.0 viewing tests pass.
+- [x] **33/33** unit-test files pass.
+- [x] **116/116** total unit tests pass.
+- [x] Production Vite build passes.
+- [x] Release verification passes with **15** safe service-worker precache entries.
+- [x] Certified branch production package: approximately **13.65 MB**.
+- [x] Clean branch certification passes.
 - [ ] GitHub Pages production deployment succeeds.
 - [ ] Real-device visual smoke test remains a separate manual acceptance step.
