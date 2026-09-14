@@ -1,4 +1,6 @@
 import type { Freshness } from '../../core/data/freshness';
+import { IntelligenceCard } from '../../features/intelligence/IntelligenceCard';
+import { buildEarthquakeIntelligence, buildNaturalEventIntelligence, buildSatelliteIntelligence } from '../../features/intelligence/derive';
 import { visualAltitudeFactor, type OrbitCameraMode, type OrbitScaleMode } from '../../features/orbit/interaction';
 import { trailLabel, type OrbitTrailMode } from '../../features/orbit/playback';
 import type { SatelliteRecord, SatelliteTelemetry } from '../../features/orbit/types';
@@ -47,18 +49,6 @@ function formatAge(timestamp: number): string {
   const days = Math.floor(hours / 24);
   return `${days}d ${hours % 24}h ago`;
 }
-function earthquakeContext(magnitude: number): string {
-  if (magnitude >= 7) return 'Major earthquake with global significance.';
-  if (magnitude >= 6) return 'Strong earthquake; regional impacts are possible.';
-  if (magnitude >= 5) return 'Moderate earthquake worth regional attention.';
-  return 'Recorded seismic activity in the current feed.';
-}
-function orbitBand(altitudeKm: number): string {
-  if (altitudeKm < 2_000) return 'Low Earth orbit';
-  if (altitudeKm < 30_000) return 'Medium Earth orbit';
-  if (altitudeKm < 40_000) return 'Geosynchronous altitude';
-  return 'High Earth orbit';
-}
 function freshnessLabel(value?: Freshness): string {
   if (!value) return 'UNKNOWN';
   if (value === 'fresh') return 'LIVE';
@@ -85,6 +75,9 @@ export function InspectorPanel(props: InspectorPanelProps) {
   const visualFactor = satelliteTelemetry ? visualAltitudeFactor(satelliteTelemetry.altitudeKm) : 1;
   const contextPoint = isEarthquake ? { lat: earthquake.coordinates.lat, lon: earthquake.coordinates.lon } : isNaturalEvent && naturalEventFrame ? naturalEventFrame.point : satelliteTelemetry ? { lat: satelliteTelemetry.lat, lon: satelliteTelemetry.lon } : coordinates ? { lat: coordinates.lat, lon: coordinates.lon } : null;
   const nearbyCity = contextPoint ? nearestCityContext(contextPoint.lat, contextPoint.lon, 1_100) : null;
+  const earthquakeIntelligence = isEarthquake ? buildEarthquakeIntelligence(earthquake) : null;
+  const naturalEventIntelligence = isNaturalEvent ? buildNaturalEventIntelligence(naturalEvent, simulationTime) : null;
+  const satelliteIntelligence = isSatellite && satelliteTelemetry ? buildSatelliteIntelligence(satellite, satelliteTelemetry) : null;
 
   return (
     <div className={compact ? 'inspector-content' : 'inspector-panel panel-surface'}>
@@ -104,7 +97,7 @@ export function InspectorPanel(props: InspectorPanelProps) {
           <div><dt>Tsunami flag</dt><dd>{earthquake.tsunami ? 'YES' : 'NO'}</dd></div>
           <div><dt>Alert</dt><dd>{earthquake.alert?.toUpperCase() ?? '—'}</dd></div>
         </dl>
-        <div className={`signal-insight ${earthquake.magnitude >= 6 ? 'signal-insight--high' : ''}`}><span>WHY IT MATTERS</span><strong>{earthquakeContext(earthquake.magnitude)}</strong><p>{nearbyCity?.label ?? `${earthquake.coordinates.depthKm.toFixed(0)} km below the surface`}</p></div>
+        {earthquakeIntelligence && <IntelligenceCard intelligence={earthquakeIntelligence} context={nearbyCity?.label ?? `${earthquake.coordinates.depthKm.toFixed(0)} km below the surface`} compact={compact} />}
         <div className="quake-meta-line"><span>{formatCoordinate(earthquake.coordinates.lat, 'N', 'S')}</span><span>{formatCoordinate(earthquake.coordinates.lon, 'E', 'W')}</span><span>SIG {earthquake.significance}</span></div>
       </>}
 
@@ -119,7 +112,7 @@ export function InspectorPanel(props: InspectorPanelProps) {
           <div><dt>Magnitude</dt><dd>{naturalEventFrame?.magnitudeValue === null || naturalEventFrame?.magnitudeValue === undefined ? '—' : `${naturalEventFrame.magnitudeValue}${naturalEventFrame.magnitudeUnit ? ` ${naturalEventFrame.magnitudeUnit}` : ''}`}</dd></div>
           <div><dt>Reports</dt><dd>{naturalEvent.geometry.length}</dd></div>
         </dl>
-        {naturalEventFrame && <div className="signal-insight"><span>GEOGRAPHIC CONTEXT</span><strong>{NATURAL_EVENT_CATEGORY_LABELS[naturalEvent.category]} · {naturalEvent.closedAt === null ? 'active' : 'closed'}</strong><p>{nearbyCity?.label ?? 'Remote or oceanic location in the bundled city context.'}</p></div>}
+        {naturalEventIntelligence && <IntelligenceCard intelligence={naturalEventIntelligence} context={naturalEventFrame ? nearbyCity?.label ?? 'Remote or oceanic location in the bundled city context.' : 'No source geometry is applicable at the selected simulation time.'} compact={compact} />}
         {naturalEventFrame && <div className="quake-meta-line"><span>{formatCoordinate(naturalEventFrame.point.lat, 'N', 'S')}</span><span>{formatCoordinate(naturalEventFrame.point.lon, 'E', 'W')}</span><span>OBSERVED</span></div>}
         {naturalEvent.sources.length > 0 && <div className="event-source-links">{naturalEvent.sources.slice(0, 3).map((source) => <a key={`${source.id}:${source.url}`} href={source.url} target="_blank" rel="noreferrer">{source.id}</a>)}</div>}
       </>}
@@ -134,7 +127,7 @@ export function InspectorPanel(props: InspectorPanelProps) {
           <div><dt>Element epoch</dt><dd>{new Date(satellite.epoch).toLocaleDateString()}</dd></div>
           <div><dt>Display scale</dt><dd>{props.orbitScaleMode === 'true' ? 'TRUE' : `VISUAL ×${visualFactor.toFixed(2)}`}</dd></div>
         </dl>
-        {satelliteTelemetry && <div className="signal-insight"><span>ORBIT CONTEXT</span><strong>{orbitBand(satelliteTelemetry.altitudeKm)} · {satelliteTelemetry.speedKmS.toFixed(2)} km/s</strong><p>{nearbyCity ? `Ground point ${nearbyCity.label.toLowerCase()}.` : 'Current propagated ground point is remote from the bundled city reference set.'}</p></div>}
+        {satelliteIntelligence && <IntelligenceCard intelligence={satelliteIntelligence} context={nearbyCity ? `Current propagated ground point ${nearbyCity.label.toLowerCase()}.` : 'Current propagated ground point is remote from the bundled city reference set.'} compact={compact} />}
         <div className="quake-meta-line"><span>PROPAGATED</span><span>{satellite.categories.map((category) => category.replace('-', ' ')).join(' · ')}</span></div>
 
         <div className="orbit-inspector-actions">
