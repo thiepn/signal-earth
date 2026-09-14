@@ -23,7 +23,13 @@ V1 includes:
 - shareable public view URLs;
 - PNG capture and optional video recording;
 - installable/offline-capable PWA shell;
-- static GitHub Pages deployment workflow.
+- static GitHub Pages deployment.
+
+## Live deployment
+
+**https://thiepn.dev/signal-earth/**
+
+GitHub Pages deploys only after the complete V1 release gate succeeds.
 
 ## Runtime infrastructure
 
@@ -48,21 +54,24 @@ Local development:
 npm run dev
 ```
 
-## GitHub Pages
-
-The repository contains a verified-artifact Pages workflow. GitHub Pages must be enabled once with **Settings → Pages → Build and deployment → Source: GitHub Actions**. Subsequent pushes to `main` run the complete release gate before `dist/` can be deployed.
-
 ## Certification status
 
-GitHub Actions certification passed on September 14, 2026 using Node 22:
+GitHub Actions certification passes on Node 22:
 
 - TypeScript: PASS;
 - Vitest: 84/84 tests PASS;
 - production Vite build: PASS;
 - service-worker production precache: PASS;
-- post-build release verification: PASS;
-- verified production site size: 13.40 MB.
+- post-build release verification: PASS.
 
 The production build uses ES-module Web Workers because satellite.js 7.x's WASM worker path requires module semantics for top-level `await`.
 
-The remaining V1 release work is operational rather than source-level: enable GitHub Pages for the repository, deploy the already-certified artifact, then perform real-browser/device smoke checks against the live URL.
+## Pages artifact hardening
+
+The first live Pages artifact revealed that hidden `.gitkeep` files were present in the generated precache but omitted by Pages packaging. That could cause the service-worker `cache.addAll()` install transaction to fail.
+
+V1 now excludes hidden and non-runtime files from the generated precache and verifies every precache target during the release gate. The final deployed artifact contains **15** runtime precache entries with **0 missing** and **0 unsafe** entries.
+
+## Remaining acceptance work
+
+Source, build, deployment and post-deploy artifact certification are complete. The remaining work is real interactive browser/device acceptance against the live site: Chromium, Firefox, Safari/WebKit where available, Android touch/PWA behavior, and performance/accessibility checks on representative devices.

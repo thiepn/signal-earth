@@ -6,11 +6,17 @@ Signal Earth is a static, browser-first observatory for Earth events, near-Earth
 
 ## Current status
 
-**Signal Earth V1.0.0 — Phase 15 Release** is feature-complete and passes the canonical production release gate in GitHub Actions.
+**Signal Earth V1.0.0 — Phase 15 Release** is production-built, release-certified, and deployed through GitHub Pages.
+
+Live deployment: **https://thiepn.dev/signal-earth/**
 
 V1 includes shareable public view URLs, clean PNG capture, optional 10-second browser recording, PWA install metadata/icons, a generated production precache for offline app-shell use, release verification scripts, and a GitHub Pages workflow that deploys only after the full release gate passes.
 
-CI certification on September 14, 2026 passed TypeScript validation, all 84 unit tests, the production Vite build, service-worker precache generation, and post-build release verification. The verified production site is 13.40 MB. The only remaining hosting prerequisite is the repository's one-time GitHub Pages setting: **Settings → Pages → Build and deployment → Source: GitHub Actions**. Real browser/device acceptance remains tracked separately from automated release certification. See `docs/PHASE-15-ACCEPTANCE.md` and `docs/RELEASE-V1.md`.
+GitHub Actions certification passes TypeScript validation, all 84 unit tests, the production Vite build, service-worker precache generation, and post-build release verification. The verified production site is 13.40 MB.
+
+A post-deploy Pages-artifact audit also caught and fixed a service-worker packaging edge case: hidden `.gitkeep` files were previously included in the generated precache even though GitHub Pages omits them from its deployment artifact. The generator now excludes hidden/non-runtime files and the release verifier rejects unsafe precache entries. The deployed artifact contains 15 safe precache entries with zero missing files.
+
+Real interactive browser/device acceptance remains separate from automated release certification. See `docs/PHASE-15-ACCEPTANCE.md` and `docs/RELEASE-V1.md`.
 
 ## Current interaction model
 

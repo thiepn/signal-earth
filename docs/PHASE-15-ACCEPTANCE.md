@@ -30,22 +30,22 @@ Release work covers:
 | Recording fallback | Unsupported browsers receive explicit unavailable state | Implemented |
 | PWA manifest | Standalone manifest, theme metadata and 192/512/maskable icons | Implemented |
 | PWA install | Browser install prompt is surfaced when provided | Implemented |
-| Offline shell | Same-origin application shell/assets cached by service worker | Implemented |
+| Offline shell | Same-origin application shell/assets cached by service worker | PASS after deployed-artifact audit |
 | Offline data | Scientific feed caching remains provider/IndexedDB-owned | Implemented |
-| Vite hashes | Post-build script injects actual dist asset filenames into SW precache | Implemented |
-| Pages path | Relative Vite base + relative PWA resources support repository subpaths | Implemented |
+| Vite hashes | Post-build script injects actual dist asset filenames into SW precache | PASS |
+| Pages path | Relative Vite base + relative PWA resources support repository subpaths | PASS |
 | Command palette | `share`, `capture`, `record`, `install` deterministic commands | Implemented |
 | Release gate | typecheck + unit tests + build + post-build production verification | PASS in GitHub Actions |
-| GitHub Pages workflow | deploy workflow uploads only the verified `dist/` artifact | Implemented |
+| GitHub Pages workflow | deploy workflow uploads only the verified `dist/` artifact | PASS |
 | Source syntax | Full TypeScript/TSX parse | PASS |
 | TypeScript | `tsc --noEmit` | PASS in GitHub Actions |
 | Unit tests | Vitest suite | PASS — 84/84 tests |
 | Production dependency install | `npm install` on Node 22 | PASS in GitHub Actions |
 | Production Vite build | `npm run build` | PASS in GitHub Actions |
-| Service-worker precache | Generated from production `dist/` | PASS — 20 assets injected |
-| Production verifier | `npm run release:verify` | PASS — 13.40 MB site |
-| GitHub Pages site | Repository Pages source configured as GitHub Actions | PENDING one-time repository setting |
-| Chromium built-app smoke test | Release artifact execution | PENDING real-browser certification |
+| Service-worker precache | Generated from production `dist/` | PASS — 15 Pages-safe runtime assets |
+| Production verifier | `npm run release:verify` | PASS — verifies every precache target |
+| GitHub Pages site | Deploy verified artifact | PASS — `https://thiepn.dev/signal-earth/` |
+| Chromium built-app smoke test | Interactive release execution | PENDING unrestricted real-browser environment |
 | Firefox/Safari/device matrix | Real execution | PENDING real-browser/device certification |
 
 ## Share URL contract
@@ -103,16 +103,16 @@ dist/ hashed assets
    ↓
 inject-precache.mjs
    ↓
-dist/sw.js receives exact generated file list
+dist/sw.js receives exact generated runtime file list
    ↓
-install
+GitHub Pages artifact packaging
+   ↓
+service-worker install
    ↓
 app shell + local Earth data available offline
 ```
 
 Scientific providers are intentionally excluded from service-worker HTTP caching because USGS/EONET/CelesTrak/SWPC/Open-Meteo already have explicit freshness and IndexedDB behavior inside Signal Earth.
-
-This prevents two caches from making contradictory claims about whether scientific data is fresh.
 
 ## Deployment gate
 
@@ -136,9 +136,10 @@ npm run release:verify
 - core Earth/data assets;
 - no development `/src/main.tsx` reference;
 - no localhost address;
+- no hidden files, source maps, Markdown, or service-worker self-reference in generated precache;
+- every generated precache entry to exist in `dist/`;
+- production JavaScript, CSS, and orbit-worker bundles in precache;
 - production site size ≤25 MB.
-
-The GitHub Pages deploy workflow runs this same release gate before uploading `dist/`.
 
 ## CI certification — September 14, 2026
 
@@ -149,9 +150,24 @@ After that correction, GitHub Actions completed the full release gate successful
 - TypeScript validation: PASS;
 - Vitest: 28 files, 84 tests, all PASS;
 - production Vite build: PASS;
-- orbit worker emitted as a separate production chunk: PASS;
-- production service-worker precache: 20 assets injected;
-- release verification: PASS;
-- verified production site size: 13.40 MB.
+- orbit worker emitted as a separate production ES-module chunk: PASS;
+- release verification: PASS.
 
-The only remaining deployment prerequisite is repository-level GitHub Pages enablement with **GitHub Actions** selected as the publishing source. That setting is outside the source tree and is intentionally not reported as a code failure.
+## Post-deploy artifact audit — September 14, 2026
+
+The first successful Pages deployment exposed a packaging mismatch that source-level verification could not see: the generated service-worker precache included four `.gitkeep` files, while GitHub Pages' uploaded artifact omitted those hidden files. Because `cache.addAll()` is atomic, any one missing precache URL could reject the service-worker install.
+
+The fix:
+
+- precache generation now ignores hidden files/directories, source maps, Markdown, and `sw.js` itself;
+- release verification parses the actual generated precache and checks every target;
+- production JS, CSS, worker, index and manifest presence are explicit release gates;
+- the redeployed Pages artifact was downloaded and inspected after deployment.
+
+Final deployed artifact audit:
+
+- generated precache entries: **15**;
+- missing precache targets: **0**;
+- unsafe/non-runtime precache entries: **0**;
+- production orbit worker present: **PASS**;
+- final Pages deployment status: **SUCCESS**.
