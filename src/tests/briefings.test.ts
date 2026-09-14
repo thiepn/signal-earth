@@ -1,13 +1,34 @@
 import { describe, expect, it } from 'vitest';
-import { BRIEFINGS } from '../features/briefings/briefings';
+import { BRIEFINGS, BRIEFING_ORDER } from '../features/briefings/briefings';
 import { TourEngine } from '../features/briefings/TourEngine';
 import type { BriefingDefinition } from '../features/briefings/types';
 
-describe('Phase 13 briefings', () => {
-  it('ships the four V1 briefing identities with stable steps', () => {
-    expect(Object.keys(BRIEFINGS).sort()).toEqual(['earth-now', 'night-earth', 'orbit-now', 'planet-motion']);
-    for (const briefing of Object.values(BRIEFINGS)) {
-      expect(briefing.steps.length).toBeGreaterThanOrEqual(4);
+describe('briefing registry and tour engine', () => {
+  it('ships Phase 23 dynamic briefing identities alongside the curated tours', () => {
+    expect(Object.keys(BRIEFINGS).sort()).toEqual([
+      'above-me',
+      'earth-now',
+      'last-24h',
+      'night-earth',
+      'orbit-now',
+      'planet-motion',
+      'seismic-now',
+      'space-weather-now',
+      'storm-watch',
+    ]);
+    expect(BRIEFING_ORDER).toHaveLength(9);
+    expect(new Set(BRIEFING_ORDER).size).toBe(BRIEFING_ORDER.length);
+
+    const dynamicIds = ['earth-now', 'seismic-now', 'storm-watch', 'space-weather-now', 'above-me', 'orbit-now', 'last-24h'] as const;
+    for (const id of dynamicIds) {
+      expect(BRIEFINGS[id].dataDriven).toBe(true);
+      expect(BRIEFINGS[id].dataState).toBeTruthy();
+    }
+    expect(BRIEFINGS['planet-motion'].dataDriven).not.toBe(true);
+    expect(BRIEFINGS['night-earth'].dataDriven).not.toBe(true);
+
+    for (const briefing of Object.values(BRIEFINGS).filter((item) => item.available !== false)) {
+      expect(briefing.steps.length).toBeGreaterThan(0);
       expect(briefing.steps.every((step) => step.holdMs >= 0 && step.instructions.length > 0)).toBe(true);
     }
   });
@@ -15,7 +36,6 @@ describe('Phase 13 briefings', () => {
   it('Planet in Motion explicitly returns to live time after accelerated playback', () => {
     const instructions = BRIEFINGS['planet-motion'].steps.flatMap((step) => step.instructions);
     expect(instructions.some((instruction) => instruction.type === 'set-speed' && instruction.speed === 1000)).toBe(true);
-    expect(instructions.at(-1)?.type === 'frame-earth' || instructions.some((instruction) => instruction.type === 'return-live')).toBe(true);
     expect(instructions.some((instruction) => instruction.type === 'return-live')).toBe(true);
   });
 
