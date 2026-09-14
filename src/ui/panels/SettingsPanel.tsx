@@ -4,6 +4,7 @@ import type { GlobeEngineMetrics } from '../../core/engine/globe.types';
 import type { QualityLevel } from '../../core/engine/QualityManager';
 import { assessPerformance } from '../../core/performance/certification';
 import type { GlobeViewportQuality } from '../../features/globe/GlobeViewport';
+import { SavedWorldsPanel } from '../../features/saved-worlds';
 import type { VisualMode } from '../../shared/types/layers';
 
 const VISUAL_MODES: Array<{ id: VisualMode; label: string; description: string; glyph: string }> = [
@@ -132,6 +133,14 @@ export function SettingsPanel(props: SettingsPanelProps) {
           <div><dt>Pointer</dt><dd>{props.device.coarsePointer ? 'coarse' : 'fine'}</dd></div>
           <div><dt>DPR</dt><dd>{props.device.devicePixelRatio.toFixed(1)}×</dd></div>
         </dl>
+      </section>
+
+      <section className="settings-section settings-section--saved-worlds">
+        <div className="settings-section__heading">
+          <div><strong>Saved Worlds</strong><span>Local observatory presets</span></div>
+          <span className="quality-pill">LOCAL</span>
+        </div>
+        <SavedWorldsPanel onCaptureCurrentView={props.onShare} />
       </section>
 
       <section className="settings-section">
