@@ -37,13 +37,13 @@ Turn the Orbit layer from a satellite point cloud with basic tracks into a deepe
 
 ## Verification
 
-- [x] TypeScript passes on the functional Phase 22 branch.
+- [x] TypeScript passes.
 - [x] **6/6** Orbit 2.0 mechanics tests pass.
 - [x] **34/34** unit-test files pass.
 - [x] **122/122** total unit tests pass.
 - [x] Production Vite build passes.
 - [x] Release verification passes with **15** safe service-worker precache entries.
-- [x] Functional Phase 22 production package: approximately **13.84 MB**.
-- [ ] Exact v1.7.0 branch-head certification passes.
+- [x] Certified v1.7.0 production package: approximately **13.84 MB**.
+- [x] Exact v1.7.0 branch-head certification passes.
 - [ ] GitHub Pages production deployment succeeds.
 - [ ] Real-device visual smoke test remains a separate manual acceptance step.
