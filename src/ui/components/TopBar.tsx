@@ -9,6 +9,7 @@ interface TopBarProps {
   pointOfView: GlobePointOfView;
   clock: SimulationClockSnapshot | null;
   visualMode: VisualMode;
+  onNow(): void;
   onSearch(): void;
   onBriefings(): void;
   onHere(): void;
@@ -25,7 +26,7 @@ function formatUtc(timestamp: number | undefined): string {
   return `${new Date(timestamp).toISOString().slice(11, 16)} UTC`;
 }
 
-export function TopBar({ ready, pointOfView, clock, visualMode, onSearch, onBriefings, onHere, onSettings, onReset }: TopBarProps) {
+export function TopBar({ ready, pointOfView, clock, visualMode, onNow, onSearch, onBriefings, onHere, onSettings, onReset }: TopBarProps) {
   const isLive = clock?.mode === 'live';
   const timeStatus = !clock ? 'STARTING' : isLive ? 'LIVE' : clock.simulationTime < clock.realTime ? 'REPLAY' : 'FUTURE';
 
@@ -51,6 +52,9 @@ export function TopBar({ ready, pointOfView, clock, visualMode, onSearch, onBrie
           {ready ? timeStatus : 'STARTING'}
         </StatusBadge>
         <span className="utc-readout">{formatUtc(clock?.simulationTime)}</span>
+        <button className="top-action top-action--now" type="button" onClick={onNow} aria-label="Open Signal Earth Now">
+          <span aria-hidden="true">●</span><span className="top-action__label">Now</span>
+        </button>
         <button className="top-action" type="button" onClick={onSearch} aria-label="Open search">
           <span aria-hidden="true">⌕</span><span className="top-action__label">Search</span>
         </button>

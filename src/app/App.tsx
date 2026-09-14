@@ -51,6 +51,8 @@ import { clearSavedObserverLocation, loadSavedObserverLocation, requestBrowserLo
 import type { GeolocationState, LocalWeather, ObserverLocation, ObserverPassForecast, ObserverSkySnapshot } from '../features/above-me/types';
 import { isAuroraModelApplicable } from '../features/space-weather/timeline';
 import { BRIEFINGS, BriefingLauncher, BriefingOverlay, TourEngine, type BriefingId, type BriefingInstruction, type BriefingStep, type TourState } from '../features/briefings';
+import { NowPanel } from '../features/now/NowPanel';
+import { buildNowSignals, type NowSignal } from '../features/now/ranking';
 import { buildSearchDocuments, searchDocuments } from '../features/search';
 import { buildShareUrl, parseShareView, type ShareViewState } from '../features/share/shareState';
 import { composeSignalEarthCapture, downloadBlob, preferredRecordingMimeType, recordCanvas, releaseFilename } from '../features/capture/capture';
@@ -69,7 +71,7 @@ import { useVisibilityAwareInterval } from '../ui/hooks/useVisibilityAwareInterv
 
 const INITIAL_POV: GlobePointOfView = { lat: 18, lng: 8, altitude: 2.35 };
 
-type MobileSheet = 'layers' | 'inspector' | 'time' | 'here' | 'settings' | null;
+type MobileSheet = 'now' | 'layers' | 'inspector' | 'time' | 'here' | 'settings' | null;
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -181,6 +183,7 @@ export function App() {
   const [pendingSatelliteAction, setPendingSatelliteAction] = useState<{ id: EntityId; mode: 'focus' | 'follow' } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [hereOpen, setHereOpen] = useState(false);
+  const [nowOpen, setNowOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [briefingLauncherOpen, setBriefingLauncherOpen] = useState(false);
   const [tourState, setTourState] = useState<TourState>(() => ({ ...tourEngineRef.current.state }));
@@ -236,6 +239,7 @@ export function App() {
   const [observerPassForecast, setObserverPassForecast] = useState<ObserverPassForecast | null>(null);
   const [observerPassAnchor, setObserverPassAnchor] = useState(() => timeEngineRef.current.currentTime);
 
+  const nowActive = nowOpen || mobileSheet === 'now';
   const reducedMotion = effectiveReducedMotion(accessibilityPreferences, systemAccessibility);
   const highContrast = effectiveHighContrast(accessibilityPreferences, systemAccessibility);
 
@@ -358,7 +362,7 @@ export function App() {
 
   useEffect(() => {
     const active = tourState.status === 'running';
-    const selectors = ['.top-bar', '.desktop-left', '.desktop-right', '.desktop-timeline', '.desktop-settings', '.desktop-here', '.mobile-dock'];
+    const selectors = ['.top-bar', '.desktop-left', '.desktop-right', '.desktop-timeline', '.desktop-settings', '.desktop-here', '.desktop-now', '.mobile-dock'];
     const nodes = selectors.flatMap((selector) => Array.from(document.querySelectorAll<HTMLElement>(selector)));
     for (const node of nodes) node.inert = active;
     return () => { for (const node of nodes) node.inert = false; };
@@ -381,7 +385,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!appState.layers.earthquakes) return undefined;
+    if (!appState.layers.earthquakes && !nowActive) return undefined;
     const controller = new AbortController();
     let active = true;
     setEarthquakeLoading(true);
@@ -425,7 +429,7 @@ export function App() {
       active = false;
       controller.abort();
     };
-  }, [appState.layers.earthquakes, earthquakeRefresh, earthquakeWindow, emit, pushToast]);
+  }, [appState.layers.earthquakes, earthquakeRefresh, earthquakeWindow, emit, nowActive, pushToast]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -437,7 +441,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!appState.layers.events) return undefined;
+    if (!appState.layers.events && !nowActive) return undefined;
     const controller = new AbortController();
     let active = true;
     setNaturalEventLoading(true);
@@ -471,10 +475,10 @@ export function App() {
     });
 
     return () => { active = false; controller.abort(); };
-  }, [appState.layers.events, naturalEventRefresh, emit, pushToast]);
+  }, [appState.layers.events, naturalEventRefresh, emit, nowActive, pushToast]);
 
   useEffect(() => {
-    if (!appState.layers.orbit && !observerLocation) return undefined;
+    if (!appState.layers.orbit && !observerLocation && !nowActive) return undefined;
     const controller = new AbortController();
     let active = true;
     setOrbitLoading(true);
@@ -506,10 +510,10 @@ export function App() {
     });
 
     return () => { active = false; controller.abort(); };
-  }, [appState.layers.orbit, observerLocation, emit, pushToast]);
+  }, [appState.layers.orbit, observerLocation, emit, nowActive, pushToast]);
 
   useEffect(() => {
-    if (!appState.layers.aurora && !observerLocation) return undefined;
+    if (!appState.layers.aurora && !observerLocation && !nowActive) return undefined;
     const controller = new AbortController();
     let active = true;
     setSpaceWeatherLoading(true);
@@ -536,7 +540,7 @@ export function App() {
     });
 
     return () => { active = false; controller.abort(); };
-  }, [appState.layers.aurora, observerLocation, spaceWeatherRefresh, emit, pushToast]);
+  }, [appState.layers.aurora, observerLocation, spaceWeatherRefresh, emit, nowActive, pushToast]);
 
   useEffect(() => {
     if (!observerLocation) return undefined;
@@ -559,9 +563,9 @@ export function App() {
     return () => { active = false; controller.abort(); };
   }, [observerLocation, weatherRefresh, emit]);
 
-  useVisibilityAwareInterval(() => setEarthquakeRefresh((current) => ({ seq: current.seq + 1, force: false })), USGS_FEED_POLICY[earthquakeWindow].ttlMs, appState.layers.earthquakes, { runOnVisible: true });
-  useVisibilityAwareInterval(() => setNaturalEventRefresh((current) => ({ seq: current.seq + 1, force: false })), EONET_CACHE_POLICY.ttlMs, appState.layers.events, { runOnVisible: true });
-  useVisibilityAwareInterval(() => setSpaceWeatherRefresh((current) => ({ seq: current.seq + 1, force: false })), SWPC_CACHE_POLICY.ttlMs, appState.layers.aurora || Boolean(observerLocation), { runOnVisible: true });
+  useVisibilityAwareInterval(() => setEarthquakeRefresh((current) => ({ seq: current.seq + 1, force: false })), USGS_FEED_POLICY[earthquakeWindow].ttlMs, appState.layers.earthquakes || nowActive, { runOnVisible: true });
+  useVisibilityAwareInterval(() => setNaturalEventRefresh((current) => ({ seq: current.seq + 1, force: false })), EONET_CACHE_POLICY.ttlMs, appState.layers.events || nowActive, { runOnVisible: true });
+  useVisibilityAwareInterval(() => setSpaceWeatherRefresh((current) => ({ seq: current.seq + 1, force: false })), SWPC_CACHE_POLICY.ttlMs, appState.layers.aurora || Boolean(observerLocation) || nowActive, { runOnVisible: true });
   useVisibilityAwareInterval(() => setWeatherRefresh((current) => ({ seq: current.seq + 1, force: false })), OPEN_METEO_CACHE_POLICY.ttlMs, Boolean(observerLocation), { runOnVisible: true });
 
   const earthquakes = earthquakeSnapshot?.data.earthquakes ?? [];
@@ -623,6 +627,17 @@ export function App() {
   }, [appState.selection.selectedId, naturalEventById]);
 
   const satelliteById = useMemo(() => new Map((orbitSnapshot?.data.satellites ?? []).map((satellite) => [satellite.id, satellite])), [orbitSnapshot]);
+  const nowBucket = Math.floor((appState.clock?.realTime ?? Date.now()) / (5 * 60_000));
+  const nowSignals = useMemo(() => buildNowSignals({
+    earthquakes,
+    naturalEvents,
+    spaceWeather: spaceWeatherSnapshot?.data ?? null,
+    satellites: orbitSnapshot?.data.satellites ?? [],
+    observerLocation,
+    passForecast: observerPassForecast,
+    now: nowBucket * 5 * 60_000,
+  }), [earthquakes, naturalEvents, nowBucket, observerLocation, observerPassForecast, orbitSnapshot, spaceWeatherSnapshot]);
+  const nowLoading = nowActive && (earthquakeLoading || naturalEventLoading || orbitLoading || spaceWeatherLoading);
   const selectedSatellite = useMemo(() => {
     const id = appState.selection.selectedId;
     return id ? satelliteById.get(id) ?? null : null;
@@ -806,6 +821,19 @@ export function App() {
     else setHereOpen(false);
   }, [activeOrbitCategories, appState.layers.orbit, emit, satelliteById]);
 
+  const openNow = useCallback(() => {
+    if (window.matchMedia?.('(max-width: 760px)').matches) {
+      setNowOpen(false);
+      setHereOpen(false);
+      setSettingsOpen(false);
+      setMobileSheet('now');
+    } else {
+      setHereOpen(false);
+      setSettingsOpen(false);
+      setNowOpen((value) => !value);
+    }
+  }, []);
+
   const openHere = useCallback(() => {
     setObserverPassAnchor(timeEngineRef.current.currentTime);
     if (window.matchMedia?.('(max-width: 760px)').matches) {
@@ -813,9 +841,42 @@ export function App() {
       setMobileSheet('here');
     } else {
       setSettingsOpen(false);
+      setNowOpen(false);
       setHereOpen((value) => !value);
     }
   }, []);
+
+  const exploreNowSignal = useCallback((signal: NowSignal) => {
+    setNowOpen(false);
+    if (mobileSheet === 'now') setMobileSheet(null);
+    if (signal.action === 'here') {
+      openHere();
+      return;
+    }
+
+    emit({ type: 'RETURN_LIVE' });
+    if (signal.action === 'space-weather') {
+      emit({ type: 'ENABLE_LAYER', layer: 'aurora' });
+      emit({ type: 'SET_VISUAL_MODE', mode: 'night' });
+      viewportRef.current?.flyToPointOfView({ lat: 67, lng: 15, altitude: 1.75 }, 900);
+      return;
+    }
+    if (!signal.entityId) return;
+
+    if (signal.layer) emit({ type: 'ENABLE_LAYER', layer: signal.layer });
+    if (signal.naturalEventCategory) setActiveNaturalEventCategories((current) => ({ ...current, [signal.naturalEventCategory!]: true }));
+    if (signal.satelliteCategory) setActiveOrbitCategories((current) => ({ ...current, [signal.satelliteCategory!]: true }));
+    if (signal.kind === 'orbit') {
+      setSelectedSatelliteTelemetry(null);
+      setPendingSatelliteAction({ id: signal.entityId, mode: 'focus' });
+    }
+    emit({ type: 'SELECT_ENTITY', entityId: signal.entityId });
+    if (signal.kind !== 'orbit' && signal.coordinates) {
+      viewportRef.current?.focusCoordinates(signal.coordinates, signal.kind === 'earthquake' ? 0.72 : 0.78);
+      emit({ type: 'FOCUS_ENTITY', entityId: signal.entityId });
+    }
+    if (window.matchMedia?.('(max-width: 760px)').matches) setMobileSheet('inspector');
+  }, [emit, mobileSheet, openHere]);
 
   const focusSelection = useCallback(() => {
     if (!selectedEntity) return;
@@ -1187,6 +1248,7 @@ export function App() {
       setMobileSheet('settings');
     } else {
       setHereOpen(false);
+      setNowOpen(false);
       setSettingsOpen((value) => !value);
     }
   }, []);
@@ -1506,7 +1568,10 @@ export function App() {
         setBriefingLauncherOpen(false);
         setSettingsOpen(false);
         setHereOpen(false);
+        setNowOpen(false);
         setMobileSheet(null);
+      } else if (event.key.toLowerCase() === 'n' && !typing) {
+        openNow();
       } else if (event.key.toLowerCase() === 'b' && !typing) {
         setBriefingLauncherOpen((value) => !value);
       } else if (event.code === 'Space' && !typing) {
@@ -1521,7 +1586,7 @@ export function App() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [cancelBriefing, resetGlobe, setVisualMode, toggleTimePlayback]);
+  }, [cancelBriefing, openNow, resetGlobe, setVisualMode, toggleTimePlayback]);
 
   return (
     <main className={`app-shell mode-${appState.visualMode}${tourState.status === 'running' ? ' briefing-active' : ''}`}>
@@ -1577,12 +1642,20 @@ export function App() {
         pointOfView={pointOfView}
         clock={appState.clock}
         visualMode={appState.visualMode}
+        onNow={openNow}
         onSearch={() => setSearchOpen(true)}
         onBriefings={() => setBriefingLauncherOpen(true)}
         onHere={openHere}
         onSettings={openSettings}
         onReset={resetGlobe}
       />
+
+      {nowOpen && (
+        <aside className="desktop-now panel-surface">
+          <header className="panel-header"><div><div className="panel-eyebrow">SIGNAL EARTH NOW</div><h2>What matters now</h2></div><button className="icon-button" type="button" onClick={() => setNowOpen(false)} aria-label="Close Signal Earth Now">×</button></header>
+          <div className="desktop-now__scroll"><NowPanel signals={nowSignals} loading={nowLoading} onSelect={exploreNowSignal} /></div>
+        </aside>
+      )}
 
       <aside className="desktop-left"><LayerPanel layers={appState.layers} earthquake={earthquakePanelProps} naturalEvents={naturalEventPanelProps} orbit={orbitPanelProps} spaceWeather={spaceWeatherPanelProps} onToggle={toggleLayer} /></aside>
       <aside className="desktop-right"><InspectorPanel entity={selectedEntity} earthquake={selectedEarthquake} earthquakeFreshness={appState.providerStatus.usgs} naturalEvent={selectedNaturalEvent} naturalEventFreshness={appState.providerStatus.eonet} simulationTime={simulationTime} satellite={selectedSatellite} satelliteTelemetry={selectedSatelliteTelemetry} orbitFreshness={appState.providerStatus.celestrak} orbitScaleMode={orbitScaleMode} orbitCameraMode={orbitCameraMode} orbitTrailMode={orbitTrailMode} showOrbitPath={showOrbitPath} showGroundTrack={showGroundTrack} onTrailModeChange={setOrbitTrailMode} onFocus={focusSelection} onFollowSatellite={followSelectedSatellite} onOrbitView={frameSelectedOrbit} onStopOrbitCamera={stopOrbitCamera} onToggleOrbitPath={setShowOrbitPath} onToggleGroundTrack={setShowGroundTrack} onClear={clearSelection} /></aside>
@@ -1597,7 +1670,7 @@ export function App() {
         />
       </div>
 
-      <div className="interaction-hint" aria-hidden="true">DRAG ORBIT · SCROLL ZOOM · CLICK SIGNAL · / SEARCH · B BRIEFING</div>
+      <div className="interaction-hint" aria-hidden="true">DRAG ORBIT · SCROLL ZOOM · CLICK SIGNAL · N NOW · / SEARCH · B BRIEFING</div>
 
       {hereOpen && (
         <aside className="desktop-here panel-surface">
@@ -1617,11 +1690,16 @@ export function App() {
       )}
 
       <nav className="mobile-dock" aria-label="Signal Earth controls">
+        <button type="button" aria-pressed={mobileSheet === 'now'} className={mobileSheet === 'now' ? 'is-active' : ''} onClick={() => setMobileSheet(mobileSheet === 'now' ? null : 'now')}><span>●</span>Now</button>
         <button type="button" aria-pressed={mobileSheet === 'layers'} className={mobileSheet === 'layers' ? 'is-active' : ''} onClick={() => setMobileSheet(mobileSheet === 'layers' ? null : 'layers')}><span>◫</span>Layers</button>
         <button type="button" aria-pressed={mobileSheet === 'here'} className={mobileSheet === 'here' ? 'is-active' : ''} onClick={() => { if (mobileSheet === 'here') setMobileSheet(null); else openHere(); }}><span>⌖</span>Here</button>
         <button type="button" aria-pressed={mobileSheet === 'time'} className={mobileSheet === 'time' ? 'is-active' : ''} onClick={() => setMobileSheet(mobileSheet === 'time' ? null : 'time')}><span>◷</span>Time</button>
         <button type="button" aria-pressed={mobileSheet === 'inspector'} className={mobileSheet === 'inspector' ? 'is-active' : ''} onClick={() => setMobileSheet(mobileSheet === 'inspector' ? null : 'inspector')}><span>◎</span>Inspect</button>
       </nav>
+
+      <BottomSheet open={mobileSheet === 'now'} eyebrow="SIGNAL EARTH NOW" title="What matters now" onClose={() => setMobileSheet(null)}>
+        <NowPanel compact signals={nowSignals} loading={nowLoading} onSelect={exploreNowSignal} />
+      </BottomSheet>
 
       <BottomSheet open={mobileSheet === 'layers'} eyebrow="SIGNALS" title="Layers" onClose={() => setMobileSheet(null)}>
         <LayerPanel compact layers={appState.layers} earthquake={earthquakePanelProps} naturalEvents={naturalEventPanelProps} orbit={orbitPanelProps} spaceWeather={spaceWeatherPanelProps} onToggle={toggleLayer} />

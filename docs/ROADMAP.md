@@ -95,3 +95,10 @@ Reduced-motion/high-contrast behavior, keyboard/focus hardening, coarse-pointer 
 Status: **implemented at source/release-contract level; production build/browser execution pending successful dependency installation.**
 
 Human-readable share URLs, PNG capture, optional browser recording, installable PWA metadata, generated offline precache, deterministic release commands, production bundle verification, GitHub Pages release workflow and final V1 release audit.
+
+
+## Phase 16 — Signal Earth Now
+
+Status: **implemented**.
+
+First-class live discovery feed ranked from loaded USGS, NASA EONET, NOAA SWPC, CelesTrak and local-observer context; one-click focus into existing globe interactions; automatic lazy loading while the Now surface is open; mobile/desktop Now navigation; nearby-city geographic context; richer earthquake, natural-event and satellite inspector explanations; deterministic ranking and geography tests.

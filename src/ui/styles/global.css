@@ -472,7 +472,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
     bottom: max(8px, env(safe-area-inset-bottom));
     min-height: 55px;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     padding: 4px;
     border: 1px solid var(--se-line);
     border-radius: 13px;
@@ -1079,6 +1079,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .briefing-active .desktop-timeline,
 .briefing-active .desktop-settings,
 .briefing-active .desktop-here,
+.briefing-active .desktop-now,
 .briefing-active .mobile-dock,
 .briefing-active .interaction-hint { opacity: 0; pointer-events: none; transition: opacity .25s ease; }
 .briefing-active .top-bar__center,
@@ -1233,3 +1234,58 @@ select:focus-visible,
 @media (max-width: 420px) {
   .release-action-grid { grid-template-columns: 1fr; }
 }
+
+
+/* Phase 16 — Signal Earth Now */
+.desktop-now {
+  position: absolute;
+  z-index: 24;
+  top: calc(max(12px, env(safe-area-inset-top)) + 62px);
+  left: max(14px, env(safe-area-inset-left));
+  width: min(382px, calc(100vw - 28px));
+  max-height: calc(100dvh - 170px);
+  overflow: hidden;
+}
+.desktop-now__scroll { max-height: calc(100dvh - 232px); overflow: auto; overscroll-behavior: contain; padding: 0 8px 9px; }
+.now-panel { min-width: 0; }
+.now-panel--compact { padding-bottom: 2px; }
+.now-feed-intro { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 6px 8px; }
+.now-feed-intro > div { display: grid; gap: 4px; }
+.now-feed-intro strong { font-size: .8rem; font-weight: 620; }
+.now-feed-count { min-width: 31px; height: 31px; display: grid; place-items: center; border: 1px solid rgba(158,231,255,.24); border-radius: 50%; color: var(--se-accent); background: rgba(158,231,255,.055); font: 700 .62rem/1 var(--se-mono); }
+.now-feed-note { margin: 0 6px 9px; color: var(--se-dim); font-size: .61rem; line-height: 1.45; }
+.now-signal-list { display: grid; gap: 5px; }
+.now-signal {
+  width: 100%; min-width: 0; min-height: 78px; display: grid; grid-template-columns: 29px minmax(0,1fr) auto; align-items: center; gap: 9px;
+  padding: 9px; border: 1px solid var(--se-line); border-radius: 10px; background: rgba(255,255,255,.018); color: var(--se-text-soft); text-align: left; cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, transform .16s ease;
+}
+.now-signal:hover { border-color: var(--se-line-strong); background: rgba(255,255,255,.045); transform: translateY(-1px); }
+.now-signal--featured { min-height: 91px; border-color: rgba(158,231,255,.27); background: linear-gradient(135deg, rgba(158,231,255,.075), rgba(158,231,255,.018)); }
+.now-signal--critical { border-left: 2px solid rgba(255,123,123,.82); }
+.now-signal--high { border-left: 2px solid rgba(255,205,117,.72); }
+.now-signal--medium { border-left: 2px solid rgba(158,231,255,.52); }
+.now-signal__rank { align-self: start; padding-top: 2px; color: var(--se-dim); font: 650 .55rem/1 var(--se-mono); letter-spacing: .06em; }
+.now-signal--featured .now-signal__rank { color: var(--se-accent); }
+.now-signal__body { min-width: 0; display: grid; gap: 4px; }
+.now-signal__eyebrow { display: flex; align-items: center; gap: 6px; overflow: hidden; color: var(--se-dim); font: 650 .49rem/1 var(--se-mono); letter-spacing: .055em; text-overflow: ellipsis; white-space: nowrap; }
+.now-signal__eyebrow b { color: var(--se-accent); font-size: .68rem; font-weight: 500; }
+.now-signal__body > strong { overflow: hidden; color: var(--se-text); font-size: .72rem; font-weight: 650; line-height: 1.28; text-overflow: ellipsis; white-space: nowrap; }
+.now-signal--featured .now-signal__body > strong { font-size: .78rem; white-space: normal; }
+.now-signal__body > small { display: -webkit-box; overflow: hidden; color: var(--se-muted); font-size: .59rem; line-height: 1.42; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.now-signal__source { color: var(--se-dim); font: 550 .47rem/1.2 var(--se-mono); letter-spacing: .035em; }
+.now-signal__metric { align-self: start; min-width: 43px; padding: 5px 6px; border: 1px solid var(--se-line); border-radius: 7px; color: var(--se-accent); background: rgba(0,0,0,.13); text-align: center; font: 700 .52rem/1 var(--se-mono); }
+.now-empty { min-height: 210px; display: grid; place-items: center; align-content: center; gap: 8px; padding: 24px; text-align: center; }
+.now-empty > span { width: 39px; height: 39px; display: grid; place-items: center; border: 1px solid rgba(158,231,255,.22); border-radius: 50%; color: var(--se-accent); }
+.now-empty strong { font-size: .76rem; }
+.now-empty p { max-width: 290px; margin: 0; color: var(--se-muted); font-size: .63rem; line-height: 1.5; }
+.signal-insight { display: grid; gap: 4px; margin: 0 14px 10px; padding: 9px 10px; border: 1px solid rgba(158,231,255,.14); border-radius: 9px; background: rgba(158,231,255,.035); }
+.signal-insight--high { border-color: rgba(255,205,117,.24); background: rgba(255,205,117,.045); }
+.signal-insight > span { color: var(--se-accent); font: 650 .49rem/1 var(--se-mono); letter-spacing: .07em; }
+.signal-insight--high > span { color: var(--se-warning); }
+.signal-insight > strong { color: var(--se-text-soft); font-size: .66rem; font-weight: 630; line-height: 1.35; }
+.signal-insight > p { margin: 0; color: var(--se-muted); font-size: .58rem; line-height: 1.45; }
+.inspector-content .signal-insight { margin-left: 0; margin-right: 0; }
+.top-action--now > span:first-child { font-size: .58rem; text-shadow: 0 0 8px rgba(158,231,255,.72); }
+@media (max-width: 760px) { .desktop-now { display: none; } .now-feed-intro { padding-left: 0; padding-right: 0; } .now-feed-note { margin-left: 0; margin-right: 0; } }
+@media (prefers-reduced-motion: reduce) { .now-signal { transition: none; } .now-signal:hover { transform: none; } }
