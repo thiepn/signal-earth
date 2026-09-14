@@ -7,6 +7,7 @@ import type { ObserverAstronomy } from './astronomy';
 import { auroraContextLabel } from './aurora';
 import type { GeolocationState, LocalWeather, ObserverLocation, ObserverPassForecast, ObserverSkySnapshot } from './types';
 import { cardinalWind, weatherCodeLabel } from './weather';
+import { currentObservingConditions, illuminationState, rankObserverSky, rankPasses } from './visibility';
 
 function coord(value: number, pos: string, neg: string): string { return `${Math.abs(value).toFixed(4)}° ${value >= 0 ? pos : neg}`; }
 function freshness(value?: Freshness): string { return (value ?? 'unavailable').toUpperCase(); }
@@ -18,6 +19,21 @@ function formatTime(timestamp: number | null, timezone?: string): string {
 function formatDateTime(timestamp: number, timezone?: string): string {
   try { return new Intl.DateTimeFormat(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: timezone }).format(timestamp); }
   catch { return new Date(timestamp).toLocaleString(); }
+}
+function direction(azimuthDeg: number): string {
+  const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  return directions[Math.round((((azimuthDeg % 360) + 360) % 360) / 45) % 8]!;
+}
+function durationLabel(start: number, end: number): string {
+  const seconds = Math.max(0, Math.round((end - start) / 1_000));
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}m ${String(seconds % 60).padStart(2, '0')}s`;
+}
+function skyStateLabel(elevationDeg: number): string {
+  if (elevationDeg >= 0) return 'DAY';
+  if (elevationDeg >= -6) return 'TWILIGHT';
+  if (elevationDeg >= -12) return 'DUSK';
+  return 'DARK';
 }
 
 interface AboveMeControlsProps {
@@ -59,11 +75,16 @@ export function AboveMeControls(props: AboveMeControlsProps) {
 
   const timezone = props.weather?.data.timezone;
   const weatherApplicable = props.weather ? Math.abs(props.simulationTime - props.weather.data.timestamp) <= 45 * 60_000 : false;
-  const weather = props.weather?.data;
-  const nextPass = props.passForecast?.passes[0] ?? null;
-  const visibleTop = props.sky?.satellites.slice(0, 5) ?? [];
+  const weather = props.weather?.data ?? null;
+  const sunElevation = props.astronomy?.sun.elevationDeg ?? Number.NaN;
+  const observingConditions = currentObservingConditions(weather, weatherApplicable, sunElevation);
+  const rankedSky = rankObserverSky(props.sky?.satellites ?? [], sunElevation, 5);
+  const rankedPasses = rankPasses(props.passForecast, props.location.lat, props.location.lon, 4);
+  const bestPass = rankedPasses[0] ?? null;
+  const favorablePass = rankedPasses.find((entry) => entry.assessment.favorableGeometry) ?? null;
+  const highSkyCount = props.sky?.satellites.filter((satellite) => satellite.elevationDeg >= 20).length ?? 0;
 
-  return <div className="above-me-controls">
+  return <div className="above-me-controls above-me-controls--v2">
     <section className="above-me-location">
       <div className="above-me-section-head"><div><span className="control-eyebrow">OBSERVER</span><strong>Your horizon</strong></div><span className="data-status data-status--fresh">LOCAL</span></div>
       <div className="above-me-coordinate"><span>{coord(props.location.lat, 'N', 'S')}</span><span>{coord(props.location.lon, 'E', 'W')}</span></div>
@@ -72,11 +93,27 @@ export function AboveMeControls(props: AboveMeControlsProps) {
       <label className="above-me-remember"><input type="checkbox" checked={props.rememberLocation} onChange={(event) => props.onRememberLocation(event.target.checked)} /> Remember this coordinate on this device</label>
     </section>
 
+    {props.astronomy && <section className="above-me-observing-summary">
+      <div className="above-me-section-head"><div><span className="control-eyebrow">WHAT CAN I SEE?</span><strong>{favorablePass ? `ISS · ${favorablePass.assessment.label}` : bestPass ? `ISS · ${bestPass.assessment.label}` : 'Local observing summary'}</strong></div><span className={`observer-quality observer-quality--${observingConditions.quality}`}>{skyStateLabel(props.astronomy.sun.elevationDeg)}</span></div>
+      <p className="observer-summary-lead">{favorablePass
+        ? `Best ISS geometry in the next 24 hours peaks ${formatDateTime(favorablePass.pass.maxTime, timezone)} at ${favorablePass.pass.maxElevationDeg.toFixed(0)}° elevation.`
+        : bestPass
+          ? `The strongest ISS geometry in the next 24 hours is ${bestPass.assessment.label.toLowerCase()} at ${formatDateTime(bestPass.pass.maxTime, timezone)}.`
+          : 'No ISS pass is currently available in the 24-hour propagation window.'}</p>
+      <div className="observer-summary-grid">
+        <div><span>Sky</span><strong>{skyStateLabel(props.astronomy.sun.elevationDeg)}</strong><small>Sun {props.astronomy.sun.elevationDeg.toFixed(1)}°</small></div>
+        <div><span>Current conditions</span><strong>{observingConditions.label}</strong><small>{weatherApplicable && weather?.cloudCoverPct !== null ? `${Math.round(weather?.cloudCoverPct ?? 0)}% cloud` : 'weather time-limited'}</small></div>
+        <div><span>Above 20°</span><strong>{highSkyCount}</strong><small>propagated satellites</small></div>
+        <div><span>Aurora</span><strong>{props.auroraApplicable ? auroraContextLabel(props.auroraValue) : 'Out of window'}</strong><small>{props.auroraApplicable && props.auroraValue !== null ? `OVATION ${props.auroraValue.toFixed(0)}` : 'model validity applies'}</small></div>
+      </div>
+      <p className="observer-summary-note">Pass quality combines observer darkness, maximum elevation and satellite sunlight at culmination. It does not model apparent brightness, local obstructions or future cloud cover.</p>
+    </section>}
+
     {props.astronomy && <section className="above-me-astronomy">
       <div className="above-me-section-head"><div><span className="control-eyebrow">LOCAL SKY</span><strong>Sun & Moon</strong></div><span>{props.astronomy.sun.daylight.replace('-', ' ').toUpperCase()}</span></div>
       <div className="above-me-stat-grid">
-        <div><span>Sun</span><strong>{props.astronomy.sun.elevationDeg.toFixed(1)}°</strong><small>AZ {props.astronomy.sun.azimuthDeg.toFixed(0)}°</small></div>
-        <div><span>Moon</span><strong>{Math.round(props.astronomy.moon.illuminatedFraction * 100)}%</strong><small>{props.astronomy.moon.phaseName}</small></div>
+        <div><span>Sun</span><strong>{props.astronomy.sun.elevationDeg.toFixed(1)}°</strong><small>AZ {props.astronomy.sun.azimuthDeg.toFixed(0)}° · {direction(props.astronomy.sun.azimuthDeg)}</small></div>
+        <div><span>Moon</span><strong>{props.astronomy.moon.elevationDeg.toFixed(1)}°</strong><small>{Math.round(props.astronomy.moon.illuminatedFraction * 100)}% · {props.astronomy.moon.phaseName}</small></div>
         <div><span>Next sunrise</span><strong>{formatTime(props.astronomy.sun.nextSunrise, timezone)}</strong><small>solar −0.833°</small></div>
         <div><span>Next sunset</span><strong>{formatTime(props.astronomy.sun.nextSunset, timezone)}</strong><small>solar −0.833°</small></div>
       </div>
@@ -85,17 +122,34 @@ export function AboveMeControls(props: AboveMeControlsProps) {
     {props.astronomy && <section className="above-me-horizon-block">
       <div className="above-me-section-head"><div><span className="control-eyebrow">MY HORIZON</span><strong>{props.sky ? `${props.sky.visibleCount} satellites above 0°` : 'Calculating satellites…'}</strong></div><span>{freshness(props.orbitFreshness)}</span></div>
       <HorizonSky astronomy={props.astronomy} sky={props.sky} onSelectSatellite={props.onSelectSatellite} />
-      {visibleTop.length > 0 && <div className="above-me-sat-list">{visibleTop.map((sat) => <button type="button" key={sat.id} onClick={() => props.onSelectSatellite(sat.id)}><span>{sat.name}</span><strong>{sat.elevationDeg.toFixed(0)}°</strong><small>AZ {sat.azimuthDeg.toFixed(0)}°</small></button>)}</div>}
+      {rankedSky.length > 0 && <>
+        <div className="above-me-list-caption"><span>Highest / best geometry now</span><small>illumination may be unavailable for live-list objects</small></div>
+        <div className="above-me-sat-list above-me-sat-list--v2">{rankedSky.map(({ satellite, assessment }) => <button type="button" key={satellite.id} onClick={() => props.onSelectSatellite(satellite.id)}>
+          <span><b>{satellite.name}</b><small>{assessment.illumination === 'unknown' ? satellite.category.replace('-', ' ') : assessment.illumination}</small></span>
+          <strong>{satellite.elevationDeg.toFixed(0)}°</strong>
+          <small>{direction(satellite.azimuthDeg)} · {Math.round(satellite.rangeKm)} km</small>
+        </button>)}</div>
+      </>}
     </section>}
 
-    <section className="above-me-pass-block">
-      <div className="above-me-section-head"><div><span className="control-eyebrow">ISS PASS</span><strong>{nextPass ? formatDateTime(nextPass.startTime, timezone) : props.passForecast ? 'No pass in forecast window' : 'Calculating pass…'}</strong></div><button type="button" onClick={props.onRefreshPasses}>Refresh</button></div>
-      {nextPass && <div className="above-me-pass-row"><div><span>Rise</span><strong>{formatTime(nextPass.startTime, timezone)}</strong></div><div><span>Max</span><strong>{nextPass.maxElevationDeg.toFixed(0)}°</strong></div><div><span>Set</span><strong>{formatTime(nextPass.endTime, timezone)}</strong></div></div>}
-      <p>Passes use propagated CelesTrak orbital elements and a 5° minimum elevation. They describe geometry, not naked-eye visibility.</p>
+    <section className="above-me-pass-block above-me-pass-block--v2">
+      <div className="above-me-section-head"><div><span className="control-eyebrow">ISS · NEXT 24 HOURS</span><strong>{rankedPasses.length ? `${rankedPasses.length} ranked pass${rankedPasses.length === 1 ? '' : 'es'}` : props.passForecast ? 'No pass in forecast window' : 'Calculating passes…'}</strong></div><button type="button" onClick={props.onRefreshPasses}>Refresh</button></div>
+      {rankedPasses.length > 0 && <div className="pass-opportunity-list">{rankedPasses.map(({ pass, assessment, observerSunElevationDeg }) => <article className={`pass-opportunity pass-opportunity--${assessment.quality}`} key={`${pass.startTime}:${pass.maxTime}`}>
+        <div className="pass-opportunity__head"><div><span>{formatDateTime(pass.startTime, timezone)}</span><strong>{assessment.label}</strong></div><b>{pass.maxElevationDeg.toFixed(0)}°</b></div>
+        <div className="pass-opportunity__timeline">
+          <div><span>RISE</span><strong>{formatTime(pass.startTime, timezone)}</strong><small>{direction(pass.riseAzimuthDeg)}</small></div>
+          <div><span>MAX</span><strong>{formatTime(pass.maxTime, timezone)}</strong><small>{direction(pass.maxAzimuthDeg)}</small></div>
+          <div><span>SET</span><strong>{formatTime(pass.endTime, timezone)}</strong><small>{direction(pass.setAzimuthDeg)}</small></div>
+        </div>
+        <div className="pass-opportunity__meta"><span>{durationLabel(pass.startTime, pass.endTime)}</span><span>Sun {observerSunElevationDeg.toFixed(0)}°</span><span>{illuminationState(pass.maxShadowFraction).toUpperCase()}</span></div>
+        <p>{assessment.reason}</p>
+      </article>)}</div>}
+      <p>ISS passes use propagated CelesTrak orbital elements and a 5° minimum elevation. Sunlight state is evaluated at maximum elevation with satellite.js. “Good” geometry is not a guarantee of naked-eye visibility.</p>
     </section>
 
     <section className="above-me-weather">
       <div className="above-me-section-head"><div><span className="control-eyebrow">CURRENT WEATHER</span><strong>Open-Meteo</strong></div><span className={`data-status data-status--${props.weather?.freshness ?? 'unavailable'}`}>{props.weatherLoading ? 'LOADING' : freshness(props.weather?.freshness)}</span></div>
+      {props.astronomy && <div className={`observing-condition observing-condition--${observingConditions.quality}`}><span>OPTICAL CONDITIONS NOW</span><strong>{observingConditions.label}</strong><p>{observingConditions.detail}</p></div>}
       {weather && weatherApplicable ? <>
         <div className="above-me-weather-main"><strong>{weather.temperatureC === null ? '—' : `${weather.temperatureC.toFixed(1)}°C`}</strong><span>{weatherCodeLabel(weather.weatherCode)}</span></div>
         <div className="above-me-weather-grid"><div><span>Cloud</span><strong>{weather.cloudCoverPct === null ? '—' : `${Math.round(weather.cloudCoverPct)}%`}</strong></div><div><span>Wind</span><strong>{weather.windSpeedKmh === null ? '—' : `${Math.round(weather.windSpeedKmh)} km/h ${cardinalWind(weather.windDirectionDeg)}`}</strong></div><div><span>Rain</span><strong>{weather.precipitationMm === null ? '—' : `${weather.precipitationMm.toFixed(1)} mm`}</strong></div><div><span>Humidity</span><strong>{weather.relativeHumidityPct === null ? '—' : `${Math.round(weather.relativeHumidityPct)}%`}</strong></div></div>
@@ -106,7 +160,7 @@ export function AboveMeControls(props: AboveMeControlsProps) {
 
     <section className="above-me-aurora">
       <div className="above-me-section-head"><div><span className="control-eyebrow">AURORA AT OBSERVER</span><strong>{props.auroraApplicable ? auroraContextLabel(props.auroraValue) : 'Model out of window'}</strong></div><span>{props.auroraApplicable && props.auroraValue !== null ? `${props.auroraValue.toFixed(0)}` : '—'}</span></div>
-      <p>Nearest NOAA OVATION model-cell value. This is model intensity/probability context, not a guarantee of visible aurora at ground level.</p>
+      <p>Nearest NOAA OVATION model-cell value. This is model intensity/probability context, not a guarantee of visible aurora at ground level. Local darkness and clouds still matter.</p>
     </section>
   </div>;
 }
