@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      SOURCE_URL: 'https://uc19a9d1e63ed5941b5639b2e7f2.dl.dropboxusercontent.com/cd/0/get/DIHiDgjQMs-1AW0cgjoqunzLXuhm3Jk-EEyuZbJ9jZQJUufbDHb7fHPlgzICtIVu9VXRufZyyzpEsiYOOV8UE7O5IUf2NTIAKhMqP4XenqhlWWIvwhYyNjqHXWizHRuks5U5jkQKoV2Kfu1irYQkHShP7DNOOAld9GEbAKVx1in-xg/file?c_luid=39011dda'
+      SOURCE_URL: 'https://uc481c2a2d5ce9c9dc2bde10e7f0.dl.dropboxusercontent.com/cd/0/get/DIE7h5lzJPlLCttYkR_qwAJohbZbH-3lNaPGWcHes85gfWpFtiTbV0YsDunhgjF6Wf_oCZJiBO5W7zhbo0ASQbU87KIvUzf3bCAwltZ2TdunAYNH1EY92r1J5fKga3rnqA8qjdufrGRBd-66b4bpsgLzK-4a8ZP8-2nfx10CHOou0A/file?c_luid=39011dda'
       SOURCE_SHA256: '4ee646c29d051554b4cdca6c146c9bcaf19d8d44df40dc5523820b9c9eb7bbca'
     steps:
       - name: Check out bootstrap repository
@@ -54,7 +54,6 @@ jobs:
 
           if [[ -z "$PROJECT_ROOT" ]]; then
             echo "Could not locate Signal Earth project root." >&2
-            find /tmp/signal-earth-v1 -maxdepth 3 -type f | sort | head -200
             exit 1
           fi
 
@@ -87,9 +86,18 @@ jobs:
         run: |
           set -euo pipefail
           PROJECT_ROOT="$(cat /tmp/signal-earth-project-root)"
+
+          # The Actions token has contents:write but cannot modify workflow files.
+          # Preserve this importer byte-for-byte and install the final release workflows
+          # through the connected GitHub account after the source cutover lands.
+          cp .github/workflows/bootstrap-v1.yml /tmp/bootstrap-v1.yml
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp -a "$PROJECT_ROOT"/. .
-          echo "Materialized $(find . -type f ! -path './.git/*' | wc -l) project files."
+          rm -rf .github/workflows
+          mkdir -p .github/workflows
+          cp /tmp/bootstrap-v1.yml .github/workflows/bootstrap-v1.yml
+
+          echo "Materialized $(find . -type f ! -path './.git/*' | wc -l) source files."
           git status --short
 
       - name: Commit V1 source
@@ -99,9 +107,17 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
+
+          if ! git diff --cached --quiet -- .github/workflows; then
+            echo "Unexpected workflow-file diff; refusing source-only push." >&2
+            git diff --cached -- .github/workflows
+            exit 1
+          fi
+
           if git diff --cached --quiet; then
-            echo "No changes to commit."
+            echo "No source changes to commit."
             exit 0
           fi
+
           git commit -m "release: materialize Signal Earth v1.0.0 source"
           git push origin HEAD:main
