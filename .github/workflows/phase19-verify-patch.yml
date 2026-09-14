@@ -25,3 +25,12 @@ jobs:
           git diff --stat
       - run: npm install --no-audit --no-fund
       - run: npm run release
+      - name: Export certified source
+        run: |
+          mkdir -p phase19-certified
+          cp README.md package.json src/app/App.tsx src/app/version.ts src/features/globe/GlobeViewport.tsx src/core/engine/SeismicRenderer.ts src/core/engine/NaturalEventRenderer.ts src/core/engine/OrbitRenderer.ts src/ui/styles/global.css phase19-certified/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase19-certified-source
+          path: phase19-certified
+          if-no-files-found: error
