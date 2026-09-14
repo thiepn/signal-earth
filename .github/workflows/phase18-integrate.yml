@@ -1,0 +1,36 @@
+name: Integrate Signal Earth Phase 18
+
+on:
+  push:
+    paths:
+      - '.github/workflows/phase18-integrate.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Apply Time 2.0 integration
+        run: |
+          python scripts/phase18_small.py
+          python scripts/phase18_app.py
+          python scripts/phase18_finish.py
+      - run: npm install --no-audit --no-fund
+      - name: Certify integrated Phase 18
+        run: npm run release
+      - name: Commit Phase 18
+        run: |
+          git config user.name 'Signal Earth Release Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add README.md package.json src docs
+          git status --short
+          git commit -m 'feat: implement Time 2.0 Phase 18'
+          git push origin HEAD:phase18-time2
