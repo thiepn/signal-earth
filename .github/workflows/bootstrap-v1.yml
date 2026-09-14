@@ -20,34 +20,89 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download Signal Earth V1 archive
+      - name: Materialize staged Signal Earth V1 archive
         shell: bash
-        env:
-          DRIVE_FILE_ID: 1aj5bzN89ErYRyzBoKgCZFbhBpODbExdh
         run: |
           set -euo pipefail
-          URL="https://drive.usercontent.google.com/download?id=${DRIVE_FILE_ID}&export=download&confirm=t"
-          curl --fail --location --retry 3 --retry-delay 2 "$URL" -o /tmp/signal-earth-v1.zip
-          test -s /tmp/signal-earth-v1.zip
-          file /tmp/signal-earth-v1.zip
-          unzip -tq /tmp/signal-earth-v1.zip
+          python - <<'PY'
+          from pathlib import Path
+          import base64
+          import io
+          import lzma
+          import shutil
+          import tarfile
+          import zipfile
 
-      - name: Unpack V1
+          repo = Path.cwd()
+          parts = sorted((repo / '.bootstrap').glob('runtime-*'))
+          if not parts:
+              raise SystemExit('No .bootstrap/runtime-* archive segments found.')
+
+          encoded = ''.join(p.read_text(encoding='utf-8').strip() for p in parts)
+          compressed = base64.b85decode(encoded)
+          payload = lzma.decompress(compressed)
+
+          out = Path('/tmp/signal-earth-v1')
+          shutil.rmtree(out, ignore_errors=True)
+          out.mkdir(parents=True)
+
+          extracted = False
+          try:
+              with tarfile.open(fileobj=io.BytesIO(payload), mode='r:*') as tf:
+                  tf.extractall(out)
+                  extracted = True
+          except tarfile.TarError:
+              pass
+
+          if not extracted:
+              stream = io.BytesIO(payload)
+              if zipfile.is_zipfile(stream):
+                  stream.seek(0)
+                  with zipfile.ZipFile(stream) as zf:
+                      zf.extractall(out)
+                  extracted = True
+
+          if not extracted:
+              raise SystemExit('Decoded payload is neither a TAR nor ZIP archive.')
+
+          candidates = []
+          for package in out.rglob('package.json'):
+              root = package.parent
+              if (root / 'src' / 'main.tsx').is_file():
+                  candidates.append(root)
+
+          if not candidates:
+              raise SystemExit('Could not locate Signal Earth project root after extraction.')
+
+          project = min(candidates, key=lambda p: (len(p.relative_to(out).parts), str(p)))
+          marker = Path('/tmp/signal-earth-project-root')
+          marker.write_text(str(project), encoding='utf-8')
+
+          print(f'Archive segments: {len(parts)}')
+          print(f'Compressed bytes: {len(compressed)}')
+          print(f'Decoded bytes: {len(payload)}')
+          print(f'Project root: {project}')
+          print(f'Project files: {sum(1 for p in project.rglob("*") if p.is_file())}')
+          PY
+
+      - name: Validate materialized V1 source
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf /tmp/signal-earth-v1
-          mkdir -p /tmp/signal-earth-v1
-          unzip -q /tmp/signal-earth-v1.zip -d /tmp/signal-earth-v1
-          test -f /tmp/signal-earth-v1/signal-earth-phase15/package.json
-          test -f /tmp/signal-earth-v1/signal-earth-phase15/src/main.tsx
+          PROJECT_ROOT="$(cat /tmp/signal-earth-project-root)"
+          test -f "$PROJECT_ROOT/package.json"
+          test -f "$PROJECT_ROOT/src/main.tsx"
+          test -f "$PROJECT_ROOT/README.md"
+          test -d "$PROJECT_ROOT/docs"
+          echo "Validated $PROJECT_ROOT"
 
       - name: Replace bootstrap repository with V1 source
         shell: bash
         run: |
           set -euo pipefail
+          PROJECT_ROOT="$(cat /tmp/signal-earth-project-root)"
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-          cp -a /tmp/signal-earth-v1/signal-earth-phase15/. .
+          cp -a "$PROJECT_ROOT"/. .
           git status --short
 
       - name: Commit V1 source
@@ -61,5 +116,5 @@ jobs:
             echo "No changes to commit."
             exit 0
           fi
-          git commit -m "release: import Signal Earth v1.0.0"
+          git commit -m "release: materialize Signal Earth v1.0.0 source"
           git push origin HEAD:main
