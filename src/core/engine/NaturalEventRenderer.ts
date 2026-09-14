@@ -8,6 +8,7 @@ import type { QualityProfile } from './QualityManager';
 
 export interface NaturalEventRendererOptions {
   onSelect?: (event: NaturalEventRecord) => void;
+  onHover?: (event: NaturalEventRecord | null, position?: { x: number; y: number }) => void;
   getSimulationTime?: () => number;
 }
 
@@ -66,6 +67,7 @@ export class NaturalEventRenderer implements SceneRenderer {
   readonly id = 'natural-events';
 
   readonly #onSelect: ((event: NaturalEventRecord) => void) | undefined;
+  readonly #onHover: NaturalEventRendererOptions['onHover'] | undefined;
   readonly #getSimulationTime: () => number;
   readonly #raycaster = new THREE.Raycaster();
   readonly #pointer = new THREE.Vector2();
@@ -88,6 +90,7 @@ export class NaturalEventRenderer implements SceneRenderer {
 
   constructor(options: NaturalEventRendererOptions = {}) {
     this.#onSelect = options.onSelect;
+    this.#onHover = options.onHover;
     this.#getSimulationTime = options.getSimulationTime ?? Date.now;
   }
 
@@ -117,7 +120,7 @@ export class NaturalEventRenderer implements SceneRenderer {
     for (const visual of this.#visuals) visual.mesh.visible = enabled;
     for (const track of this.#tracks) track.line.visible = enabled && track.line.geometry.drawRange.count >= 2;
     for (const line of this.#selectionOutlines) line.visible = enabled;
-    if (!enabled) this.#clearCursor();
+    if (!enabled) { this.#clearCursor(); this.#onHover?.(null); }
   }
 
   setActiveCategories(active: Record<NaturalEventCategory, boolean>): void {
@@ -149,6 +152,7 @@ export class NaturalEventRenderer implements SceneRenderer {
       this.#context.renderer.domElement.removeEventListener('pointermove', this.#onPointerMove);
     }
     this.#clearCursor();
+    this.#onHover?.(null);
     this.#disposeVisuals();
     this.#disposeTracks();
     this.#disposeSelectionOutlines();
@@ -363,6 +367,7 @@ export class NaturalEventRenderer implements SceneRenderer {
     if (!hit) return;
     event.preventDefault();
     event.stopImmediatePropagation();
+    this.#onHover?.(null);
     this.#onSelect?.(hit.event);
   };
 
@@ -373,5 +378,7 @@ export class NaturalEventRenderer implements SceneRenderer {
     if (key === this.#hoveredKey) return;
     this.#hoveredKey = key;
     this.#context.renderer.domElement.style.cursor = hit ? 'pointer' : '';
+    if (hit) this.#onHover?.(hit.event, { x: event.clientX, y: event.clientY });
+    else this.#onHover?.(null);
   };
 }

@@ -6,13 +6,15 @@ Signal Earth is a static, browser-first observatory for Earth events, near-Earth
 
 ## Current status
 
-**Signal Earth v1.3.0 — Phase 18 Time 2.0** is production-built and release-certified for GitHub Pages.
+**Signal Earth v1.4.0 — Phase 19 Observatory UX 2.0** is production-built and release-certified for GitHub Pages.
 
 Live deployment: **https://thiepn.dev/signal-earth/**
 
-The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), observer-relative Above Me tools, shareable public views, PNG capture, optional 10-second recording, PWA/offline-shell support, and Time 2.0 historical replay.
+The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), observer-relative Above Me tools, shareable public views, PNG capture, optional 10-second recording, PWA/offline-shell support, Time 2.0 historical replay, and the Observatory UX 2.0 interaction layer.
 
 Time 2.0 exposes **24H / 7D / 30D** historical ranges while keeping future simulation capped at +24H. A guided **24H REPLAY** runs the previous day at 1000× and reconnects automatically to LIVE. Deep historical replay prioritizes observed Earth data; current CelesTrak OMM propagation is deliberately suppressed outside its certified ±24-hour window.
+
+Observatory UX 2.0 adds contextual one-layer-at-a-time controls, zoom-aware country/city labels and country borders, hover-before-click signal previews, a selection-driven desktop inspector, and direct mobile Search access. These are presentation and interaction improvements; they do not change source semantics.
 
 Automated release certification runs TypeScript validation, unit tests, the production Vite build, service-worker precache generation, and post-build release verification before Pages deployment. Real interactive browser/device acceptance remains a separate manual check.
 
@@ -20,11 +22,11 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 
 ### Desktop
 
-- top bar: app/time status, current UTC, search, planetary briefings, Above Me, display settings
-- left: five primary layers with NASA GIBS weather, USGS earthquakes, NASA EONET events, CelesTrak orbit, and NOAA SWPC/aurora controls
-- right: selected-object inspector
+- top bar: primary **Now** and **Search** actions, compact time state, then secondary Brief / Here / Display tools
+- left: five primary layers, with only the selected layer’s detailed controls expanded
+- right: selected-object inspector appears only when an object is selected
 - bottom: Time 2.0 timeline with 24H / 7D / 30D replay ranges and a +24H future cap
-- globe: drag/pinch/scroll navigation; click earthquakes, NASA natural events, or propagated satellites to inspect them; click Earth to create a surface target
+- globe: zoom-aware country/city context and country borders; hover signals for a compact preview, click to inspect, or click Earth to create a surface target
 
 ### Timeline
 
@@ -40,8 +42,8 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 ### Mobile
 
 - compact top bar
-- persistent bottom dock
-- one bottom sheet at a time for Layers, Here, Time, or Inspect
+- persistent bottom dock prioritizing **Now / Search / Layers / Time / Here**
+- one bottom sheet at a time; selecting a globe signal opens Inspect automatically
 - the Time sheet exposes the same timeline state and controls as desktop
 - Above Me is available from the Here dock; location permission is requested only after explicit opt-in
 
@@ -60,6 +62,8 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 - no runtime backend
 - React/TypeScript for low-frequency UI state
 - Three.js + Globe.gl for rendering
+- presentation-only Natural Earth borders and zoom-aware geographic labels are isolated in a dedicated renderer and can fail without affecting signal layers
+- hover previews are renderer callbacks into low-frequency React UI state; high-frequency render data remains outside React
 - renderer state stays behind `GlobeViewportHandle`
 - one ActionBus for application-state actions
 - one central `TimeEngine`
@@ -136,9 +140,9 @@ The local Earth textures are stylized derivatives of public-domain Natural Earth
 - [`docs/PHASE-16-ACCEPTANCE.md`](docs/PHASE-16-ACCEPTANCE.md)
 - [`docs/PHASE-17-ACCEPTANCE.md`](docs/PHASE-17-ACCEPTANCE.md)
 - [`docs/PHASE-18-ACCEPTANCE.md`](docs/PHASE-18-ACCEPTANCE.md)
+- [`docs/PHASE-19-ACCEPTANCE.md`](docs/PHASE-19-ACCEPTANCE.md)
 - [`docs/RELEASE-V1.md`](docs/RELEASE-V1.md)
 
 ## Living Earth — v1.2
 
 Signal Earth now includes a first-class Weather layer with NASA EOSDIS/GIBS VIIRS cloud optical thickness, optional GPM IMERG 30-minute precipitation, NASA EONET severe-storm tracks, simulation-time-aware observation requests, bounded recent fallback, and surfaced observation timestamps. Weather imagery is near-real-time observed context, not a forecast.
-

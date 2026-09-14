@@ -7,6 +7,7 @@ import type { QualityProfile } from './QualityManager';
 
 export interface SeismicRendererOptions {
   onSelect?: (earthquake: EarthquakeRecord) => void;
+  onHover?: (earthquake: EarthquakeRecord | null, position?: { x: number; y: number }) => void;
   getSimulationTime?: () => number;
 }
 
@@ -46,6 +47,7 @@ export class SeismicRenderer implements SceneRenderer {
   readonly id = 'seismic';
 
   readonly #onSelect: ((earthquake: EarthquakeRecord) => void) | undefined;
+  readonly #onHover: SeismicRendererOptions['onHover'] | undefined;
   readonly #getSimulationTime: () => number;
   readonly #raycaster = new THREE.Raycaster();
   readonly #pointer = new THREE.Vector2();
@@ -69,6 +71,7 @@ export class SeismicRenderer implements SceneRenderer {
 
   constructor(options: SeismicRendererOptions = {}) {
     this.#onSelect = options.onSelect;
+    this.#onHover = options.onHover;
     this.#getSimulationTime = options.getSimulationTime ?? Date.now;
   }
 
@@ -125,8 +128,10 @@ export class SeismicRenderer implements SceneRenderer {
     this.#enabled = enabled;
     if (this.#mesh) this.#mesh.visible = enabled;
     for (const pulse of this.#pulses) pulse.mesh.visible = enabled;
-    if (!enabled && this.#context?.renderer.domElement.style.cursor === 'pointer') {
-      this.#context.renderer.domElement.style.cursor = '';
+    if (!enabled) {
+      this.#hoveredInstance = null;
+      this.#onHover?.(null);
+      if (this.#context?.renderer.domElement.style.cursor === 'pointer') this.#context.renderer.domElement.style.cursor = '';
     }
   }
 
@@ -142,6 +147,7 @@ export class SeismicRenderer implements SceneRenderer {
       this.#context.renderer.domElement.removeEventListener('pointermove', this.#onPointerMove);
       if (this.#context.renderer.domElement.style.cursor === 'pointer') this.#context.renderer.domElement.style.cursor = '';
     }
+    this.#onHover?.(null);
     this.#disposeMesh();
     this.#disposePulses();
     this.#context = null;
@@ -298,6 +304,7 @@ export class SeismicRenderer implements SceneRenderer {
     if (!earthquake) return;
     event.preventDefault();
     event.stopImmediatePropagation();
+    this.#onHover?.(null);
     this.#onSelect?.(earthquake);
   };
 
@@ -307,5 +314,8 @@ export class SeismicRenderer implements SceneRenderer {
     if (instanceId === this.#hoveredInstance) return;
     this.#hoveredInstance = instanceId;
     this.#context.renderer.domElement.style.cursor = instanceId === null ? '' : 'pointer';
+    const earthquake = instanceId === null ? null : this.#rendered[instanceId] ?? null;
+    if (earthquake) this.#onHover?.(earthquake, { x: event.clientX, y: event.clientY });
+    else this.#onHover?.(null);
   };
 }

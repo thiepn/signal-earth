@@ -11,6 +11,7 @@ import type { QualityProfile } from './QualityManager';
 
 export interface OrbitRendererOptions {
   onSelect?: (satellite: SatelliteRecord, telemetry: SatelliteTelemetry) => void;
+  onHover?: (satellite: SatelliteRecord | null, telemetry: SatelliteTelemetry | null, position?: { x: number; y: number }) => void;
   onSelectedTelemetry?: (telemetry: SatelliteTelemetry | null) => void;
   getSimulationTime?: () => number;
 }
@@ -47,6 +48,7 @@ export class OrbitRenderer implements SceneRenderer {
   readonly id = 'orbit';
 
   readonly #onSelect: OrbitRendererOptions['onSelect'] | undefined;
+  readonly #onHover: OrbitRendererOptions['onHover'] | undefined;
   readonly #onSelectedTelemetry: OrbitRendererOptions['onSelectedTelemetry'] | undefined;
   readonly #getSimulationTime: () => number;
   readonly #raycaster = new THREE.Raycaster();
@@ -84,6 +86,7 @@ export class OrbitRenderer implements SceneRenderer {
 
   constructor(options: OrbitRendererOptions = {}) {
     this.#onSelect = options.onSelect;
+    this.#onHover = options.onHover;
     this.#onSelectedTelemetry = options.onSelectedTelemetry;
     this.#getSimulationTime = options.getSimulationTime ?? Date.now;
   }
@@ -176,6 +179,8 @@ export class OrbitRenderer implements SceneRenderer {
     this.#frame = null;
     this.#slotByCatalogIndex.clear();
     this.#selectedWorldValid = false;
+    this.#hoveredInstance = null;
+    this.#onHover?.(null, null);
     this.#onSelectedTelemetry?.(null);
   }
 
@@ -208,7 +213,11 @@ export class OrbitRenderer implements SceneRenderer {
     this.#updateTrackVisibility();
     if (this.#trailLine) this.#trailLine.visible = enabled && this.#trail?.satelliteId === this.#selectedId;
     if (this.#halo) this.#halo.visible = enabled && this.#selectedWorldValid && this.#selectedId !== null;
-    if (!enabled && this.#context?.renderer.domElement.style.cursor === 'pointer') this.#context.renderer.domElement.style.cursor = '';
+    if (!enabled) {
+      this.#hoveredInstance = null;
+      this.#onHover?.(null, null);
+      if (this.#context?.renderer.domElement.style.cursor === 'pointer') this.#context.renderer.domElement.style.cursor = '';
+    }
   }
 
   setSelected(id: EntityId | null): void {
@@ -269,6 +278,7 @@ export class OrbitRenderer implements SceneRenderer {
       this.#context.renderer.domElement.removeEventListener('pointermove', this.#onPointerMove);
       if (this.#context.renderer.domElement.style.cursor === 'pointer') this.#context.renderer.domElement.style.cursor = '';
     }
+    this.#onHover?.(null, null);
     this.#disposeMesh();
     this.#disposeHalo();
     this.#disposeTrackLines();
@@ -510,6 +520,7 @@ export class OrbitRenderer implements SceneRenderer {
     const telemetry = this.#telemetryForCatalogIndex(catalogIndex);
     if (!satellite || !telemetry) return;
     event.preventDefault(); event.stopImmediatePropagation();
+    this.#onHover?.(null, null);
     this.#onSelect?.(satellite, telemetry);
   };
 
@@ -519,5 +530,11 @@ export class OrbitRenderer implements SceneRenderer {
     if (instanceId === this.#hoveredInstance) return;
     this.#hoveredInstance = instanceId;
     this.#context.renderer.domElement.style.cursor = instanceId === null ? '' : 'pointer';
+    if (instanceId === null) { this.#onHover?.(null, null); return; }
+    const catalogIndex = this.#renderedIndices[instanceId];
+    const satellite = catalogIndex === undefined ? null : this.#catalog[catalogIndex] ?? null;
+    const telemetry = catalogIndex === undefined ? null : this.#telemetryForCatalogIndex(catalogIndex);
+    if (satellite && telemetry) this.#onHover?.(satellite, telemetry, { x: event.clientX, y: event.clientY });
+    else this.#onHover?.(null, null);
   };
 }
