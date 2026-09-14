@@ -1,5 +1,7 @@
 import type { Freshness } from '../../core/data/freshness';
 import type { TimeMode } from '../../core/time/temporal';
+import { IntelligenceCard } from '../intelligence/IntelligenceCard';
+import { buildSpaceWeatherIntelligence } from '../intelligence/derive';
 import type { VisualMode } from '../../shared/types/layers';
 import { describeKp, isAuroraModelApplicable, isCurrentScaleApplicable, isCurrentSolarWindApplicable, kpSampleAt } from './timeline';
 import type { AuroraHemispheres, SpaceWeatherFeed } from './types';
@@ -42,6 +44,14 @@ export function SpaceWeatherControls(props: SpaceWeatherControlsProps) {
   const scales = props.feed?.scales;
   const wind = props.feed?.solarWind;
   const recentMessages = props.feed?.messages.filter((message) => message.kind !== 'cancel').slice(0, 2) ?? [];
+  const intelligence = buildSpaceWeatherIntelligence({
+    kp,
+    scales: scales ?? null,
+    solarWind: wind ?? null,
+    scalesApplicable,
+    solarWindApplicable,
+    auroraApplicable,
+  });
 
   return (
     <section className="space-weather-controls" aria-label="Space weather controls">
@@ -77,6 +87,8 @@ export function SpaceWeatherControls(props: SpaceWeatherControlsProps) {
         <div><span>IMF Bz</span><strong>{solarWindApplicable && wind?.bzGsmNt !== null ? `${(wind?.bzGsmNt ?? 0) >= 0 ? '+' : ''}${(wind?.bzGsmNt ?? 0).toFixed(1)} nT` : '—'}</strong></div>
         {!solarWindApplicable && wind && <small>Current solar-wind observations are not applied to replay/future time.</small>}
       </div>
+
+      <IntelligenceCard intelligence={intelligence} compact />
 
       <div className="aurora-control-block">
         <div className="aurora-control-head">
