@@ -1,6 +1,7 @@
 import type { EntityId, GeoCoordinates, SignalKind } from '../../shared/types/entities';
 import type { LayerId, VisualMode } from '../../shared/types/layers';
 import type { SatelliteCategory } from '../../shared/types/orbit';
+import type { BriefingId } from '../briefings/types';
 
 export type SearchResultKind =
   | SignalKind
@@ -53,7 +54,7 @@ export type CommandIntent =
   | { type: 'capture' }
   | { type: 'record' }
   | { type: 'install' }
-  | { type: 'briefings'; briefingId?: 'earth-now' | 'orbit-now' | 'planet-motion' | 'night-earth' };
+  | { type: 'briefings'; briefingId?: BriefingId };
 
 export interface ParsedCommand {
   intent: CommandIntent;
