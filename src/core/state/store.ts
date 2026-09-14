@@ -21,7 +21,7 @@ export interface AppState {
 
 export const INITIAL_APP_STATE: AppState = {
   selection: { selectedId: null, hoveredId: null, mode: 'none' },
-  layers: { earthquakes: true, events: false, orbit: false, aurora: false },
+  layers: { weather: true, earthquakes: true, events: false, orbit: false, aurora: false },
   visualMode: 'earth',
   providerStatus: {},
   clock: null,

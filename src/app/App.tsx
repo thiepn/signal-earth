@@ -53,6 +53,7 @@ import { isAuroraModelApplicable } from '../features/space-weather/timeline';
 import { BRIEFINGS, BriefingLauncher, BriefingOverlay, TourEngine, type BriefingId, type BriefingInstruction, type BriefingStep, type TourState } from '../features/briefings';
 import { NowPanel } from '../features/now/NowPanel';
 import { buildNowSignals, type NowSignal } from '../features/now/ranking';
+import { DEFAULT_WEATHER_SETTINGS, EMPTY_ATMOSPHERE_STATUS, type AtmosphereStatus, type WeatherLayerSettings } from '../features/weather/types';
 import { buildSearchDocuments, searchDocuments } from '../features/search';
 import { buildShareUrl, parseShareView, type ShareViewState } from '../features/share/shareState';
 import { composeSignalEarthCapture, downloadBlob, preferredRecordingMimeType, recordCanvas, releaseFilename } from '../features/capture/capture';
@@ -226,6 +227,11 @@ export function App() {
   const [spaceWeatherError, setSpaceWeatherError] = useState<string | null>(null);
   const [spaceWeatherRefresh, setSpaceWeatherRefresh] = useState({ seq: 0, force: false });
   const [auroraHemispheres, setAuroraHemispheres] = useState<AuroraHemispheres>(initialShareRef.current?.auroraHemispheres ?? { north: true, south: true });
+  const [atmosphereSettings, setAtmosphereSettings] = useState<WeatherLayerSettings>(initialShareRef.current?.weatherSettings ?? { ...DEFAULT_WEATHER_SETTINGS });
+  const [atmosphereStatus, setAtmosphereStatus] = useState<AtmosphereStatus>(() => ({
+    clouds: { ...EMPTY_ATMOSPHERE_STATUS.clouds },
+    precipitation: { ...EMPTY_ATMOSPHERE_STATUS.precipitation },
+  }));
 
   const [observerLocation, setObserverLocation] = useState<ObserverLocation | null>(() => loadSavedObserverLocation());
   const [rememberLocation, setRememberLocation] = useState(() => loadSavedObserverLocation() !== null);
@@ -441,7 +447,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!appState.layers.events && !nowActive) return undefined;
+    if (!appState.layers.events && !nowActive && !(appState.layers.weather && atmosphereSettings.stormTracks)) return undefined;
     const controller = new AbortController();
     let active = true;
     setNaturalEventLoading(true);
@@ -475,7 +481,7 @@ export function App() {
     });
 
     return () => { active = false; controller.abort(); };
-  }, [appState.layers.events, naturalEventRefresh, emit, nowActive, pushToast]);
+  }, [appState.layers.events, appState.layers.weather, atmosphereSettings.stormTracks, naturalEventRefresh, emit, nowActive, pushToast]);
 
   useEffect(() => {
     if (!appState.layers.orbit && !observerLocation && !nowActive) return undefined;
@@ -564,12 +570,13 @@ export function App() {
   }, [observerLocation, weatherRefresh, emit]);
 
   useVisibilityAwareInterval(() => setEarthquakeRefresh((current) => ({ seq: current.seq + 1, force: false })), USGS_FEED_POLICY[earthquakeWindow].ttlMs, appState.layers.earthquakes || nowActive, { runOnVisible: true });
-  useVisibilityAwareInterval(() => setNaturalEventRefresh((current) => ({ seq: current.seq + 1, force: false })), EONET_CACHE_POLICY.ttlMs, appState.layers.events || nowActive, { runOnVisible: true });
+  useVisibilityAwareInterval(() => setNaturalEventRefresh((current) => ({ seq: current.seq + 1, force: false })), EONET_CACHE_POLICY.ttlMs, appState.layers.events || nowActive || (appState.layers.weather && atmosphereSettings.stormTracks), { runOnVisible: true });
   useVisibilityAwareInterval(() => setSpaceWeatherRefresh((current) => ({ seq: current.seq + 1, force: false })), SWPC_CACHE_POLICY.ttlMs, appState.layers.aurora || Boolean(observerLocation) || nowActive, { runOnVisible: true });
   useVisibilityAwareInterval(() => setWeatherRefresh((current) => ({ seq: current.seq + 1, force: false })), OPEN_METEO_CACHE_POLICY.ttlMs, Boolean(observerLocation), { runOnVisible: true });
 
   const earthquakes = earthquakeSnapshot?.data.earthquakes ?? [];
   const naturalEvents = naturalEventSnapshot?.data.events ?? [];
+  const weatherStormEvents = useMemo(() => naturalEvents.filter((event) => event.category === 'severe-storm'), [naturalEvents]);
   const simulationTime = appState.clock?.simulationTime ?? timeEngineRef.current.currentTime;
 
   // Pass prediction is expensive enough that it should not recompute at render-clock cadence.
@@ -1278,6 +1285,7 @@ export function App() {
       showOrbitPath,
       showGroundTrack,
       auroraHemispheres,
+      weatherSettings: atmosphereSettings,
     };
     try {
       const url = buildShareUrl(window.location.href, shareState);
@@ -1286,7 +1294,7 @@ export function App() {
     } catch (error) {
       pushToast('Could not copy view link', error instanceof Error ? error.message : 'Clipboard access failed.', 'warning');
     }
-  }, [activeNaturalEventCategories, activeOrbitCategories, appState.clock, appState.layers, appState.selection.selectedId, appState.visualMode, auroraHemispheres, earthquakeMagnitude, earthquakeWindow, orbitScaleMode, orbitTrailMode, pointOfView, pushToast, showGroundTrack, showOrbitPath]);
+  }, [activeNaturalEventCategories, activeOrbitCategories, appState.clock, appState.layers, appState.selection.selectedId, appState.visualMode, atmosphereSettings, auroraHemispheres, earthquakeMagnitude, earthquakeWindow, orbitScaleMode, orbitTrailMode, pointOfView, pushToast, showGroundTrack, showOrbitPath]);
 
   const captureSnapshot = useCallback(async () => {
     try {
@@ -1419,7 +1427,7 @@ export function App() {
     }
 
     if (intent.type === 'layer') {
-      const layers: LayerId[] = ['earthquakes', 'events', 'orbit', 'aurora'];
+      const layers: LayerId[] = ['weather', 'earthquakes', 'events', 'orbit', 'aurora'];
       if (intent.operation === 'only') {
         for (const layer of layers) emit({ type: layer === intent.layer ? 'ENABLE_LAYER' : 'DISABLE_LAYER', layer });
       } else emit({ type: intent.operation === 'show' ? 'ENABLE_LAYER' : 'DISABLE_LAYER', layer: intent.layer });
@@ -1471,6 +1479,15 @@ export function App() {
     executeCommand(command);
     setSearchOpen(false);
   }, [executeCommand]);
+
+  const atmospherePanelProps = {
+    settings: atmosphereSettings,
+    status: atmosphereStatus,
+    simulationTime,
+    timeMode: appState.clock?.mode ?? 'live' as const,
+    onSettingsChange: setAtmosphereSettings,
+    onRefresh: () => viewportRef.current?.refreshAtmosphere(),
+  };
 
   const earthquakePanelProps = {
     window: earthquakeWindow,
@@ -1601,6 +1618,9 @@ export function App() {
           earthquakesEnabled={appState.layers.earthquakes}
           naturalEvents={categoryFilteredNaturalEvents}
           naturalEventsEnabled={appState.layers.events}
+          weatherEnabled={appState.layers.weather}
+          weatherSettings={atmosphereSettings}
+          weatherStorms={weatherStormEvents}
           activeNaturalEventCategories={activeNaturalEventCategories}
           simulationTime={simulationTime}
           selectedEntityId={appState.selection.selectedId}
@@ -1629,6 +1649,7 @@ export function App() {
           onOrbitWorkerError={(message) => setOrbitError(message)}
           onObserverSky={setObserverSky}
           onObserverPasses={setObserverPassForecast}
+          onAtmosphereStatus={setAtmosphereStatus}
           onCameraState={handleCameraState}
           onManualCameraInput={handleManualCameraInput}
           onQualityChange={setQuality}
@@ -1657,7 +1678,7 @@ export function App() {
         </aside>
       )}
 
-      <aside className="desktop-left"><LayerPanel layers={appState.layers} earthquake={earthquakePanelProps} naturalEvents={naturalEventPanelProps} orbit={orbitPanelProps} spaceWeather={spaceWeatherPanelProps} onToggle={toggleLayer} /></aside>
+      <aside className="desktop-left"><LayerPanel layers={appState.layers} weather={atmospherePanelProps} earthquake={earthquakePanelProps} naturalEvents={naturalEventPanelProps} orbit={orbitPanelProps} spaceWeather={spaceWeatherPanelProps} onToggle={toggleLayer} /></aside>
       <aside className="desktop-right"><InspectorPanel entity={selectedEntity} earthquake={selectedEarthquake} earthquakeFreshness={appState.providerStatus.usgs} naturalEvent={selectedNaturalEvent} naturalEventFreshness={appState.providerStatus.eonet} simulationTime={simulationTime} satellite={selectedSatellite} satelliteTelemetry={selectedSatelliteTelemetry} orbitFreshness={appState.providerStatus.celestrak} orbitScaleMode={orbitScaleMode} orbitCameraMode={orbitCameraMode} orbitTrailMode={orbitTrailMode} showOrbitPath={showOrbitPath} showGroundTrack={showGroundTrack} onTrailModeChange={setOrbitTrailMode} onFocus={focusSelection} onFollowSatellite={followSelectedSatellite} onOrbitView={frameSelectedOrbit} onStopOrbitCamera={stopOrbitCamera} onToggleOrbitPath={setShowOrbitPath} onToggleGroundTrack={setShowGroundTrack} onClear={clearSelection} /></aside>
 
       <div className="desktop-timeline">
@@ -1702,7 +1723,7 @@ export function App() {
       </BottomSheet>
 
       <BottomSheet open={mobileSheet === 'layers'} eyebrow="SIGNALS" title="Layers" onClose={() => setMobileSheet(null)}>
-        <LayerPanel compact layers={appState.layers} earthquake={earthquakePanelProps} naturalEvents={naturalEventPanelProps} orbit={orbitPanelProps} spaceWeather={spaceWeatherPanelProps} onToggle={toggleLayer} />
+        <LayerPanel compact layers={appState.layers} weather={atmospherePanelProps} earthquake={earthquakePanelProps} naturalEvents={naturalEventPanelProps} orbit={orbitPanelProps} spaceWeather={spaceWeatherPanelProps} onToggle={toggleLayer} />
       </BottomSheet>
 
       <BottomSheet open={mobileSheet === 'inspector'} eyebrow="INSPECTOR" title={selectedEntity?.name ?? 'Selection'} onClose={() => setMobileSheet(null)}>

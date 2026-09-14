@@ -6,6 +6,7 @@ import type { OrbitTrailMode } from '../orbit/playback';
 import type { SatelliteCategory } from '../../shared/types/orbit';
 import type { LayerId, VisualMode } from '../../shared/types/layers';
 import type { EntityId } from '../../shared/types/entities';
+import { DEFAULT_WEATHER_SETTINGS, type WeatherLayerSettings } from '../weather/types';
 
 export const SHARE_STATE_VERSION = 1;
 
@@ -13,6 +14,7 @@ export interface ShareViewState {
   pointOfView: { lat: number; lng: number; altitude: number };
   visualMode: VisualMode;
   layers: Record<LayerId, boolean>;
+  weatherSettings: WeatherLayerSettings;
   clock: SimulationClockSnapshot | null;
   selectedEntityId: EntityId | null;
   earthquakeWindow: EarthquakeTimeWindow;
@@ -28,7 +30,7 @@ export interface ShareViewState {
 
 export type ParsedShareView = Partial<ShareViewState>;
 
-const LAYERS: LayerId[] = ['earthquakes', 'events', 'orbit', 'aurora'];
+const LAYERS: LayerId[] = ['weather', 'earthquakes', 'events', 'orbit', 'aurora'];
 const MODES: VisualMode[] = ['earth', 'signal', 'night', 'wireframe'];
 const WINDOWS: EarthquakeTimeWindow[] = ['hour', 'day', 'week', 'month'];
 const SAT_CATEGORIES: SatelliteCategory[] = ['stations', 'weather', 'earth-observation', 'navigation', 'science', 'communications'];
@@ -73,6 +75,8 @@ export function buildShareUrl(currentUrl: string | URL, state: ShareViewState): 
   q.set('alt', fixed(state.pointOfView.altitude, 3));
   q.set('mode', state.visualMode);
   q.set('layers', enabledList(state.layers, LAYERS));
+  q.set('wx', `${state.weatherSettings.clouds ? 'c' : ''}${state.weatherSettings.precipitation ? 'p' : ''}${state.weatherSettings.stormTracks ? 's' : ''}` || 'none');
+  q.set('wo', fixed(state.weatherSettings.opacity, 2));
 
   if (!state.clock || state.clock.mode === 'live') {
     q.set('time', 'live');
@@ -116,6 +120,18 @@ export function parseShareView(input: string | URL | URLSearchParams): ParsedSha
 
   const layers = enabledMap(q.get('layers'), LAYERS);
   if (layers) parsed.layers = layers;
+
+  const weatherFlags = q.get('wx');
+  const weatherOpacity = finiteNumber(q.get('wo'));
+  if (weatherFlags !== null || weatherOpacity !== null) {
+    const flags = weatherFlags ?? 'cs';
+    parsed.weatherSettings = {
+      clouds: flags.includes('c'),
+      precipitation: flags.includes('p'),
+      stormTracks: flags.includes('s'),
+      opacity: Math.max(0.25, Math.min(1, weatherOpacity ?? DEFAULT_WEATHER_SETTINGS.opacity)),
+    };
+  }
 
   const time = q.get('time');
   if (time === 'live') {

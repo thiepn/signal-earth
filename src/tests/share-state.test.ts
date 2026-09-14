@@ -5,7 +5,8 @@ import { asEntityId } from '../shared/types/entities';
 const state: ShareViewState = {
   pointOfView: { lat: 35.6762, lng: 139.6503, altitude: 1.2 },
   visualMode: 'night',
-  layers: { earthquakes: true, events: false, orbit: true, aurora: true },
+  layers: { weather: true, earthquakes: true, events: false, orbit: true, aurora: true },
+  weatherSettings: { clouds: true, precipitation: true, stormTracks: false, opacity: 0.65 },
   clock: { mode: 'simulation', realTime: 1_000, simulationTime: 2_000, speed: 100, isPlaying: true },
   selectedEntityId: asEntityId('satellite:25544'),
   earthquakeWindow: 'day',
@@ -27,6 +28,8 @@ describe('share state', () => {
     expect(parsed.visualMode).toBe('night');
     expect(parsed.layers?.orbit).toBe(true);
     expect(parsed.layers?.events).toBe(false);
+    expect(parsed.layers?.weather).toBe(true);
+    expect(parsed.weatherSettings).toEqual({ clouds: true, precipitation: true, stormTracks: false, opacity: 0.65 });
     expect(parsed.selectedEntityId).toBe('satellite:25544');
     expect(parsed.orbitScaleMode).toBe('visual');
     expect(parsed.orbitTrailMode).toBe('past-10m');

@@ -11,6 +11,8 @@ import type { NaturalEventCategory } from '../../features/natural-events/types';
 import { SpaceWeatherControls } from '../../features/space-weather/SpaceWeatherControls';
 import type { AuroraHemispheres, SpaceWeatherFeed } from '../../features/space-weather/types';
 import type { VisualMode } from '../../shared/types/layers';
+import { WeatherControls } from '../../features/weather/WeatherControls';
+import type { AtmosphereStatus, WeatherLayerSettings } from '../../features/weather/types';
 
 const LAYERS: Array<{
   id: LayerId;
@@ -19,6 +21,7 @@ const LAYERS: Array<{
   glyph: string;
   phase: string;
 }> = [
+  { id: 'weather', label: 'Weather', description: 'NASA clouds, rain + storm tracks', glyph: '≋', phase: 'NRT' },
   { id: 'earthquakes', label: 'Earthquakes', description: 'USGS live seismic feed', glyph: '◎', phase: 'LIVE' },
   { id: 'events', label: 'Natural events', description: 'NASA EONET observed events', glyph: '△', phase: 'LIVE' },
   { id: 'orbit', label: 'Orbit', description: 'CelesTrak propagated satellites', glyph: '✦', phase: 'LIVE' },
@@ -29,6 +32,14 @@ interface LayerPanelProps {
   layers: Record<LayerId, boolean>;
   onToggle(layer: LayerId, enabled: boolean): void;
   compact?: boolean;
+  weather: {
+    settings: WeatherLayerSettings;
+    status: AtmosphereStatus;
+    simulationTime: number;
+    timeMode: TimeMode;
+    onSettingsChange(settings: WeatherLayerSettings): void;
+    onRefresh(): void;
+  };
   earthquake: {
     window: EarthquakeTimeWindow;
     magnitude: number;
@@ -88,7 +99,7 @@ interface LayerPanelProps {
 
 }
 
-export function LayerPanel({ layers, onToggle, earthquake, naturalEvents, orbit, spaceWeather, compact = false }: LayerPanelProps) {
+export function LayerPanel({ layers, onToggle, weather, earthquake, naturalEvents, orbit, spaceWeather, compact = false }: LayerPanelProps) {
   return (
     <div className={compact ? 'layer-list layer-list--compact' : 'layer-panel panel-surface'}>
       {!compact && (
@@ -97,7 +108,7 @@ export function LayerPanel({ layers, onToggle, earthquake, naturalEvents, orbit,
             <div className="panel-eyebrow">SIGNALS</div>
             <h2>Layers</h2>
           </div>
-          <span className="panel-count">{Object.values(layers).filter(Boolean).length}/4</span>
+          <span className="panel-count">{Object.values(layers).filter(Boolean).length}/5</span>
         </header>
       )}
       <div className="layer-list">
@@ -123,6 +134,8 @@ export function LayerPanel({ layers, onToggle, earthquake, naturalEvents, orbit,
         })}
       </div>
 
+      <WeatherControls enabled={layers.weather} {...weather} />
+
       <EarthquakeControls
         enabled={layers.earthquakes}
         window={earthquake.window}
@@ -146,7 +159,7 @@ export function LayerPanel({ layers, onToggle, earthquake, naturalEvents, orbit,
 
       <SpaceWeatherControls enabled={layers.aurora} {...spaceWeather} />
 
-      {!compact && <p className="panel-note">Earthquakes and NASA natural events are observed data. Orbit positions are propagated locally from CelesTrak OMM data. NOAA space-weather products preserve observed, estimated and forecast semantics separately.</p>}
+      {!compact && <p className="panel-note">NASA weather imagery and natural events are observed/near-real-time context. Earthquakes are observed data, orbit positions are propagated locally, and NOAA space-weather products preserve observed, estimated and forecast semantics separately.</p>}
     </div>
   );
 }

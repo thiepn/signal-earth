@@ -8,6 +8,7 @@ import { rankSearchDocuments } from './ranking';
 import type { RankedSearchResult, SearchDocument } from './types';
 
 const SYSTEM_DOCUMENTS: SearchDocument[] = [
+  { id: 'layer:weather', kind: 'layer', title: 'Weather', subtitle: 'NASA cloud, precipitation and storm context', keywords: ['weather layer', 'atmosphere', 'cloud', 'clouds', 'precipitation', 'rain', 'gibs', 'imerg', 'viirs'], layer: 'weather', priority: 88 },
   { id: 'layer:earthquakes', kind: 'layer', title: 'Earthquakes', subtitle: 'USGS seismic layer', keywords: ['quake', 'quakes', 'seismic', 'usgs'], layer: 'earthquakes', priority: 80 },
   { id: 'layer:events', kind: 'layer', title: 'Natural events', subtitle: 'NASA EONET storms, wildfires and volcanoes', keywords: ['events', 'storm', 'storms', 'wildfire', 'wildfires', 'volcano', 'volcanoes', 'eonet'], layer: 'events', priority: 70 },
   { id: 'layer:orbit', kind: 'layer', title: 'Orbit', subtitle: 'CelesTrak satellite layer', keywords: ['satellite', 'satellites', 'space', 'celestrak'], layer: 'orbit', priority: 85 },

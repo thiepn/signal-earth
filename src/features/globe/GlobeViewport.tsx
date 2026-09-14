@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import type { CameraState } from '../../core/engine/camera.types';
 import { EarthRenderer } from '../../core/engine/EarthRenderer';
+import { AtmosphereRenderer } from '../../core/engine/AtmosphereRenderer';
 import { AuroraRenderer } from '../../core/engine/AuroraRenderer';
 import { GlobeEngine } from '../../core/engine/GlobeEngine';
 import { OrbitRenderer } from '../../core/engine/OrbitRenderer';
@@ -21,6 +22,7 @@ import type { EarthquakeRecord } from '../seismic/types';
 import type { NaturalEventCategory, NaturalEventRecord } from '../natural-events/types';
 import type { AuroraHemispheres, AuroraModel } from '../space-weather/types';
 import type { ObserverLocation, ObserverPassForecast, ObserverSkySnapshot, ObserverSkySatellite } from '../above-me/types';
+import type { AtmosphereStatus, WeatherLayerSettings } from '../weather/types';
 
 export interface GlobeViewportQuality { level: QualityLevel; mode: QualityMode; }
 
@@ -35,6 +37,7 @@ export interface GlobeViewportHandle {
   stopOrbitCamera(): void;
   captureImage(): Promise<Blob>;
   captureStream(fps?: number): MediaStream | null;
+  refreshAtmosphere(): void;
 }
 
 interface GlobeViewportProps {
@@ -46,6 +49,9 @@ interface GlobeViewportProps {
   earthquakesEnabled: boolean;
   naturalEvents: NaturalEventRecord[];
   naturalEventsEnabled: boolean;
+  weatherEnabled: boolean;
+  weatherSettings: WeatherLayerSettings;
+  weatherStorms: NaturalEventRecord[];
   activeNaturalEventCategories: Record<NaturalEventCategory, boolean>;
   simulationTime: number;
   selectedEntityId: EntityId | null;
@@ -74,6 +80,7 @@ interface GlobeViewportProps {
   onOrbitWorkerError?: (message: string) => void;
   onObserverSky?: (snapshot: ObserverSkySnapshot | null) => void;
   onObserverPasses?: (forecast: ObserverPassForecast | null) => void;
+  onAtmosphereStatus?: (status: AtmosphereStatus) => void;
   onCameraState?: (state: Readonly<CameraState>) => void;
   onManualCameraInput?: () => void;
   onQualityChange?: (quality: GlobeViewportQuality) => void;
@@ -82,6 +89,7 @@ interface GlobeViewportProps {
 export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>(function GlobeViewport(props, ref) {
   const hostRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<GlobeEngine | null>(null);
+  const atmosphereRef = useRef<AtmosphereRenderer | null>(null);
   const seismicRef = useRef<SeismicRenderer | null>(null);
   const naturalEventsRef = useRef<NaturalEventRenderer | null>(null);
   const orbitRef = useRef<OrbitRenderer | null>(null);
@@ -127,6 +135,7 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
     stopOrbitCamera: () => engineRef.current?.stopWorldTracking(true),
     captureImage: () => engineRef.current?.captureImage('image/png') ?? Promise.reject(new Error('Globe renderer is not ready.')),
     captureStream: (fps = 30) => engineRef.current?.captureStream(fps) ?? null,
+    refreshAtmosphere: () => atmosphereRef.current?.refresh(),
   }), []);
 
   useEffect(() => {
@@ -143,6 +152,9 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
   useEffect(() => { naturalEventsRef.current?.setActiveCategories(props.activeNaturalEventCategories); }, [props.activeNaturalEventCategories]);
   useEffect(() => { naturalEventsRef.current?.setSimulationTime(props.simulationTime); }, [props.simulationTime]);
   useEffect(() => { naturalEventsRef.current?.setSelected(props.selectedEntityId); }, [props.selectedEntityId]);
+  useEffect(() => { atmosphereRef.current?.setEnabled(props.weatherEnabled); }, [props.weatherEnabled]);
+  useEffect(() => { atmosphereRef.current?.setSettings(props.weatherSettings); }, [props.weatherSettings]);
+  useEffect(() => { atmosphereRef.current?.setStormEvents(props.weatherStorms); }, [props.weatherStorms]);
 
   useEffect(() => { auroraRef.current?.setModel(props.auroraModel); }, [props.auroraModel]);
   useEffect(() => { auroraRef.current?.setEnabled(props.auroraEnabled); }, [props.auroraEnabled]);
@@ -238,6 +250,7 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
     const engine = new GlobeEngine(host, { qualityManager });
     engine.setReducedMotion(callbacksRef.current.reducedMotion);
     const earth = new EarthRenderer({ getSimulationTime: () => callbacksRef.current.getSimulationTime(), getVisualMode: () => callbacksRef.current.visualMode });
+    const atmosphere = new AtmosphereRenderer({ getSimulationTime: () => callbacksRef.current.getSimulationTime(), onStatus: (status) => callbacksRef.current.onAtmosphereStatus?.(status) });
     const aurora = new AuroraRenderer({ getSimulationTime: () => callbacksRef.current.getSimulationTime(), getVisualMode: () => callbacksRef.current.visualMode });
     const observer = new ObserverRenderer();
     const seismic = new SeismicRenderer({ onSelect: (earthquake) => callbacksRef.current.onEarthquakeClick?.(earthquake), getSimulationTime: () => callbacksRef.current.getSimulationTime() });
@@ -290,6 +303,7 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
       onError: (message) => callbacksRef.current.onOrbitWorkerError?.(message),
     });
     engineRef.current = engine;
+    atmosphereRef.current = atmosphere;
     seismicRef.current = seismic;
     naturalEventsRef.current = naturalEvents;
     orbitRef.current = orbit;
@@ -367,12 +381,16 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
 
     try {
       engine.registerRenderer(earth);
+      engine.registerRenderer(atmosphere);
       engine.registerRenderer(aurora);
       engine.registerRenderer(observer);
       engine.registerRenderer(seismic);
       engine.registerRenderer(naturalEvents);
       engine.registerRenderer(orbit);
       engine.mount();
+      atmosphere.setEnabled(callbacksRef.current.weatherEnabled);
+      atmosphere.setSettings(callbacksRef.current.weatherSettings);
+      atmosphere.setStormEvents(callbacksRef.current.weatherStorms);
       seismic.setReducedMotion(callbacksRef.current.reducedMotion);
       seismic.setEarthquakes(callbacksRef.current.earthquakes);
       seismic.setEnabled(callbacksRef.current.earthquakesEnabled);
@@ -420,7 +438,7 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
       document.removeEventListener('visibilitychange', onVisibilityChange);
       unsubscribeQuality(); unsubscribeMetrics(); unsubscribePov(); unsubscribeClick(); unsubscribeCamera(); unsubscribeManualCamera();
       orbitClient.dispose(); engine.dispose();
-      seismicRef.current = null; naturalEventsRef.current = null; orbitRef.current = null; auroraRef.current = null; observerRef.current = null; orbitClientRef.current = null; engineRef.current = null;
+      atmosphereRef.current = null; seismicRef.current = null; naturalEventsRef.current = null; orbitRef.current = null; auroraRef.current = null; observerRef.current = null; orbitClientRef.current = null; engineRef.current = null;
     };
   }, []);
 

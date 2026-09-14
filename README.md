@@ -134,3 +134,8 @@ The local Earth textures are stylized derivatives of public-domain Natural Earth
 - [`docs/PHASE-14-ACCEPTANCE.md`](docs/PHASE-14-ACCEPTANCE.md)
 - [`docs/PHASE-15-ACCEPTANCE.md`](docs/PHASE-15-ACCEPTANCE.md)
 - [`docs/RELEASE-V1.md`](docs/RELEASE-V1.md)
+
+## Living Earth — v1.2
+
+Signal Earth now includes a first-class Weather layer with NASA EOSDIS/GIBS VIIRS cloud optical thickness, optional GPM IMERG 30-minute precipitation, NASA EONET severe-storm tracks, simulation-time-aware observation requests, bounded recent fallback, and surfaced observation timestamps. Weather imagery is near-real-time observed context, not a forecast.
+

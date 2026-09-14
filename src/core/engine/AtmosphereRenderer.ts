@@ -22,7 +22,7 @@ export class AtmosphereRenderer implements SceneRenderer {
   readonly id = 'atmosphere';
 
   readonly #getSimulationTime: () => number;
-  readonly #onStatus?: (status: AtmosphereStatus) => void;
+  readonly #onStatus: ((status: AtmosphereStatus) => void) | undefined;
 
   #context: GlobeRenderContext | null = null;
   #enabled = false;

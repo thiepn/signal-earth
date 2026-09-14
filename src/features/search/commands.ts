@@ -4,6 +4,7 @@ import { normalizeSearchText } from './ranking';
 import type { ParsedCommand } from './types';
 
 const LAYERS: Record<string, LayerId> = {
+  atmosphere: 'weather', cloud: 'weather', clouds: 'weather', precipitation: 'weather', rain: 'weather', 'weather layer': 'weather',
   earthquake: 'earthquakes', earthquakes: 'earthquakes', quake: 'earthquakes', quakes: 'earthquakes', seismic: 'earthquakes',
   event: 'events', events: 'events', natural: 'events', 'natural events': 'events', wildfire: 'events', wildfires: 'events', volcano: 'events', volcanoes: 'events', storm: 'events', storms: 'events',
   orbit: 'orbit', satellites: 'orbit', satellite: 'orbit', sats: 'orbit',
@@ -101,6 +102,6 @@ export function parseCommand(input: string): ParsedCommand | null {
 }
 
 export const COMMAND_EXAMPLES = [
-  'goto tokyo', 'follow iss', 'show earthquakes', 'only weather', 'hide aurora',
+  'goto tokyo', 'follow iss', 'show earthquakes', 'show clouds', 'hide aurora',
   'mode night', 'speed 100x', 'rewind 6h', 'live', 'pause', 'reset', 'here', 'share', 'capture', 'record', 'briefing', 'earth now',
 ];

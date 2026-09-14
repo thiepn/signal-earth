@@ -9,6 +9,8 @@ describe('deterministic search commands', () => {
 
   it('parses layer and category commands', () => {
     expect(parseCommand('show earthquakes')?.intent).toEqual({ type: 'layer', operation: 'show', layer: 'earthquakes' });
+    expect(parseCommand('show clouds')?.intent).toEqual({ type: 'layer', operation: 'show', layer: 'weather' });
+    expect(parseCommand('show weather')?.intent).toEqual({ type: 'satellite-category', operation: 'show', category: 'weather' });
     expect(parseCommand('only GPS')?.intent).toEqual({ type: 'satellite-category', operation: 'only', category: 'navigation' });
   });
 
