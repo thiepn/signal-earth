@@ -6,15 +6,17 @@ Signal Earth is a static, browser-first observatory for Earth events, near-Earth
 
 ## Current status
 
-**Signal Earth v1.4.0 — Phase 19 Observatory UX 2.0** is production-built and release-certified for GitHub Pages.
+**Signal Earth v1.5.0 — Phase 20 Signal Intelligence** is production-built and release-certified for GitHub Pages.
 
 Live deployment: **https://thiepn.dev/signal-earth/**
 
-The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), observer-relative Above Me tools, shareable public views, PNG capture, optional 10-second recording, PWA/offline-shell support, Time 2.0 historical replay, and the Observatory UX 2.0 interaction layer.
+The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), observer-relative Above Me tools, shareable public views, PNG capture, optional 10-second recording, PWA/offline-shell support, Time 2.0 historical replay, Observatory UX 2.0, and deterministic Signal Intelligence.
 
 Time 2.0 exposes **24H / 7D / 30D** historical ranges while keeping future simulation capped at +24H. A guided **24H REPLAY** runs the previous day at 1000× and reconnects automatically to LIVE. Deep historical replay prioritizes observed Earth data; current CelesTrak OMM propagation is deliberately suppressed outside its certified ±24-hour window.
 
 Observatory UX 2.0 adds contextual one-layer-at-a-time controls, zoom-aware country/city labels and country borders, hover-before-click signal previews, a selection-driven desktop inspector, and directly accessible Search on mobile. These are presentation and interaction improvements; they do not change source semantics.
+
+Signal Intelligence adds a deterministic explanation layer beside raw provider fields. It derives earthquake impact cues from USGS fields, event duration and reported movement from NASA EONET geometry, orbital mechanics from CelesTrak OMM elements, and plain-language space-weather state from NOAA SWPC products. Every intelligence card exposes its derivation method and preserves the distinction between source measurements, provider flags, propagated values, forecasts, and local calculations.
 
 Automated release certification runs TypeScript validation, unit tests, the production Vite build, service-worker precache generation, and post-build release verification before Pages deployment. Real interactive browser/device acceptance remains a separate manual check.
 
@@ -23,8 +25,8 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 ### Desktop
 
 - top bar: primary **Now** and **Search** actions, compact time state, then secondary Brief / Here / Display tools
-- left: five primary layers, with only the selected layer’s detailed controls expanded
-- right: selected-object inspector appears only when an object is selected
+- left: five primary layers, with only the selected layer’s detailed controls expanded; Space Weather includes a deterministic activity interpretation card
+- right: selected-object inspector appears only when an object is selected and separates raw source data from derived intelligence
 - bottom: Time 2.0 timeline with 24H / 7D / 30D replay ranges and a +24H future cap
 - globe: zoom-aware country/city context and country borders; hover signals for a compact preview, click to inspect, or click Earth to create a surface target
 
@@ -44,6 +46,7 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 - compact top bar with direct Search access
 - persistent bottom dock for **Now / Layers / Here / Time / Inspect**
 - one bottom sheet at a time; selecting a globe signal opens Inspect automatically
+- intelligence cards use the same source/derived distinction as desktop
 - the Time sheet exposes the same timeline state and controls as desktop
 - Above Me is available from the Here dock; location permission is requested only after explicit opt-in
 
@@ -64,6 +67,12 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 - Three.js + Globe.gl for rendering
 - presentation-only Natural Earth borders and zoom-aware geographic labels are isolated in a dedicated renderer and can fail without affecting signal layers
 - hover previews originate from renderer callbacks and are presented through a lightweight UI bridge; high-frequency render data remains outside React app state
+- Signal Intelligence rules are pure deterministic functions over already-loaded provider records; no generative model or hidden remote enrichment is used
+- intelligence cards expose their methodology and never replace raw source fields
+- provider flags remain flags: for example, the USGS tsunami field is never rewritten as a claim that a tsunami occurred
+- NASA EONET movement calculations use only geometry reports applicable at the selected simulation time
+- CelesTrak orbital period, inclination and eccentricity are derived from OMM fields; displayed spacecraft positions remain locally propagated rather than measured live positions
+- current-only NOAA scales and solar-wind observations are never backfilled into unrelated replay/future time
 - renderer state stays behind `GlobeViewportHandle`
 - one ActionBus for application-state actions
 - one central `TimeEngine`
@@ -141,8 +150,13 @@ The local Earth textures are stylized derivatives of public-domain Natural Earth
 - [`docs/PHASE-17-ACCEPTANCE.md`](docs/PHASE-17-ACCEPTANCE.md)
 - [`docs/PHASE-18-ACCEPTANCE.md`](docs/PHASE-18-ACCEPTANCE.md)
 - [`docs/PHASE-19-ACCEPTANCE.md`](docs/PHASE-19-ACCEPTANCE.md)
+- [`docs/PHASE-20-ACCEPTANCE.md`](docs/PHASE-20-ACCEPTANCE.md)
 - [`docs/RELEASE-V1.md`](docs/RELEASE-V1.md)
 
 ## Living Earth — v1.2
 
-Signal Earth now includes a first-class Weather layer with NASA EOSDIS/GIBS VIIRS cloud optical thickness, optional GPM IMERG 30-minute precipitation, NASA EONET severe-storm tracks, simulation-time-aware observation requests, bounded recent fallback, and surfaced observation timestamps. Weather imagery is near-real-time observed context, not a forecast.
+Signal Earth includes a first-class Weather layer with NASA EOSDIS/GIBS VIIRS cloud optical thickness, optional GPM IMERG 30-minute precipitation, NASA EONET severe-storm tracks, simulation-time-aware observation requests, bounded recent fallback, and surfaced observation timestamps. Weather imagery is near-real-time observed context, not a forecast.
+
+## Signal Intelligence — v1.5
+
+Selected earthquakes, natural events and satellites now include deterministic intelligence cards that explain the most relevant source-derived context while retaining the raw provider fields above them. The Aurora/Space Weather layer receives the same treatment for NOAA Kp, G/R/S scales, solar wind and OVATION validity. Derived text is explicitly labelled and includes its methodology; no AI-generated event claims are introduced.
