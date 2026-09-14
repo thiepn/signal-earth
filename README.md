@@ -6,11 +6,11 @@ Signal Earth is a static, browser-first observatory for Earth events, near-Earth
 
 ## Current status
 
-**Signal Earth v1.7.0 — Phase 22 Orbit 2.0** is production-built and release-certified for GitHub Pages.
+**Signal Earth v1.8.0 — Phase 23 Dynamic Briefings 2.0** is production-built and release-certified for GitHub Pages.
 
 Live deployment: **https://thiepn.dev/signal-earth/**
 
-The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Orbit 2.0, Above Me 2.0 observer tools, shareable public views, PNG capture, optional 10-second recording, PWA/offline-shell support, Time 2.0 historical replay, Observatory UX 2.0, and deterministic Signal Intelligence.
+The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Dynamic Briefings 2.0, Orbit 2.0, Above Me 2.0 observer tools, shareable public views, PNG capture, optional 10-second recording, PWA/offline-shell support, Time 2.0 historical replay, Observatory UX 2.0, and deterministic Signal Intelligence.
 
 Time 2.0 exposes **24H / 7D / 30D** historical ranges while keeping future simulation capped at +24H. A guided **24H REPLAY** runs the previous day at 1000× and reconnects automatically to LIVE. Deep historical replay prioritizes observed Earth data; current CelesTrak OMM propagation is deliberately suppressed outside its certified ±24-hour window.
 
@@ -22,6 +22,8 @@ Above Me 2.0 makes observer context first-class. It ranks ISS passes using local
 
 Orbit 2.0 deepens selected-satellite exploration with mean-element perigee/apogee, orbital period and mean phase, LEO/MEO/GEO/HEO classification, deterministic constellation/program context, selected-time sunlight/shadow state, ascending/descending ground-track semantics, richer hover context, and stratified marker sampling for large catalogs.
 
+Dynamic Briefings 2.0 composes source-grounded tours from the same provider/cache services used by the observatory. **Earth Right Now, Seismic Activity, Active Storms, Space Weather, Above Me, Orbit Highlights, and Last 24 Hours** refresh their inputs when the launcher opens, expose LIVE/CACHED/PARTIAL state, omit missing sections instead of fabricating replacements, and freeze the composed definition before playback. Planet in Motion and Night Earth remain curated tours. No generative model writes briefing narration.
+
 Automated release certification runs TypeScript validation, unit tests, the production Vite build, service-worker precache generation, and post-build release verification before Pages deployment. Real interactive browser/device acceptance remains a separate manual check.
 
 ## Current interaction model
@@ -29,6 +31,7 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 ### Desktop
 
 - top bar: primary **Now** and **Search** actions, compact time state, then secondary Brief / Here / Display tools
+- Brief opens Dynamic Briefings 2.0, refreshes supported public provider snapshots through their existing cache policies, and labels each briefing LIVE DATA / CACHED / PARTIAL / UNAVAILABLE / CURATED before playback
 - left: five primary layers, with only the selected layer’s detailed controls expanded; Orbit explains LEO/MEO/GEO/HEO classes and ASC/DESC ground-track semantics
 - right: selected-object inspector appears only when an object is selected and separates raw source data from derived intelligence; selected satellites expose Orbit 2.0 mechanics and sunlight state
 - bottom: Time 2.0 timeline with 24H / 7D / 30D replay ranges and a +24H future cap
@@ -56,6 +59,7 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 - selected satellites expose the same Orbit 2.0 mechanics as desktop in compact form
 - the Time sheet exposes the same timeline state and controls as desktop
 - Above Me 2.0 is available from the Here dock; location permission is requested only after explicit opt-in
+- Dynamic Briefings 2.0 uses the same frozen definitions and source-state labels as desktop
 
 ### Keyboard
 
@@ -65,6 +69,8 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 - `R` — reset globe
 - `Esc` — close transient UI
 - `1` / `2` / `3` / `4` — Earth / Signal / Night / Wireframe
+
+Briefing commands include `earth now`, `seismic briefing`, `active storms briefing`, `space weather briefing`, `above me briefing`, `orbit highlights`, and `last 24h briefing`. The bare `last 24 hours` command remains the Time 2.0 replay command.
 
 ## Architecture constraints
 
@@ -114,7 +120,12 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 - local Sun/Moon/horizon geometry follows the same central TimeEngine
 - Phase 12 search is local-first and indexes only simulation-time-applicable observed events
 - command parsing is deterministic and compiles to existing app actions; no AI or remote geocoder is used
-- Phase 13 cinematic briefings are declarative step sequences executed through existing app actions and GlobeEngine camera APIs
+- the Phase 13 TourEngine remains the sole briefing executor; Phase 23 changes briefing composition rather than adding another camera/tour runtime
+- Dynamic Briefings 2.0 refresh through existing USGS/EONET/CelesTrak/SWPC/Open-Meteo service/cache contracts and introduce no hidden enrichment provider
+- dynamic briefing definitions freeze before Play and do not rewrite narration during playback
+- partial provider failures omit unsupported sections and surface PARTIAL state instead of generating substitute facts
+- Above Me briefing composition never triggers browser geolocation; it uses only an explicitly remembered observer coordinate
+- Last 24 Hours is a source-timestamp recap, not a synthetic reconstruction of unobserved intermediate states
 - the tour engine is cancellable, supports step skipping, and snapshots/restores user state rather than leaving hidden mutations behind
 - manual OrbitControls input emits an explicit interruption signal so guided camera control yields immediately to the user
 
@@ -167,6 +178,7 @@ The local Earth textures are stylized derivatives of public-domain Natural Earth
 - [`docs/PHASE-20-ACCEPTANCE.md`](docs/PHASE-20-ACCEPTANCE.md)
 - [`docs/PHASE-21-ACCEPTANCE.md`](docs/PHASE-21-ACCEPTANCE.md)
 - [`docs/PHASE-22-ACCEPTANCE.md`](docs/PHASE-22-ACCEPTANCE.md)
+- [`docs/PHASE-23-ACCEPTANCE.md`](docs/PHASE-23-ACCEPTANCE.md)
 - [`docs/RELEASE-V1.md`](docs/RELEASE-V1.md)
 
 ## Living Earth — v1.2
@@ -183,4 +195,8 @@ The local observatory ranks ISS opportunities over the next 24 hours, shows rise
 
 ## Orbit 2.0 — v1.7
 
-Selected satellites now expose local OMM-derived orbital mechanics including period, perigee/apogee, mean phase, orbit class, constellation/program context, selected-time sunlight state and ascending/descending motion. The selected ground track separates solid ascending from dashed descending segments, while large quality-capped catalogs use stratified sampling rather than first-record truncation. All positions remain locally propagated CelesTrak OMM context within Signal Earth’s existing certified ±24-hour orbit window.
+Selected satellites expose local OMM-derived orbital mechanics including period, perigee/apogee, mean phase, orbit class, constellation/program context, selected-time sunlight state and ascending/descending motion. The selected ground track separates solid ascending from dashed descending segments, while large quality-capped catalogs use stratified sampling rather than first-record truncation. All positions remain locally propagated CelesTrak OMM context within Signal Earth’s existing certified ±24-hour orbit window.
+
+## Dynamic Briefings 2.0 — v1.8
+
+The briefing launcher now composes current tours from the observatory’s existing provider/cache services. Earth Right Now, Seismic Activity, Active Storms, Space Weather, Above Me, Orbit Highlights and Last 24 Hours use deterministic snapshot-derived counts, names and statuses, expose their data state before playback, and omit unavailable sections rather than inventing replacements. Above Me is only personalized from a coordinate the user explicitly chose to remember. Planet in Motion and Night Earth remain curated cinematic tours.
