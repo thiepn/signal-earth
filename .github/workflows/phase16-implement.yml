@@ -28,4 +28,4 @@ jobs:
           git commit -m 'feat: implement Signal Earth Now Phase 16'
           git push origin HEAD:main
 
-# trigger: history scan ready
+# trigger: exact YAML indentation recovery
