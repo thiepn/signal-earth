@@ -6,6 +6,11 @@ export default defineConfig({
   // under a repository path such as https://user.github.io/signal-earth/.
   base: './',
   plugins: [react()],
+  worker: {
+    // satellite.js 7.x ships a WASM worker path that uses top-level await.
+    // ES module workers support that syntax; Vite's default IIFE workers do not.
+    format: 'es',
+  },
   build: {
     target: 'es2022',
     sourcemap: true,
