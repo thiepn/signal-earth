@@ -1,5 +1,6 @@
 import type { LayerId, VisualMode } from '../../shared/types/layers';
 import type { SatelliteCategory } from '../../shared/types/orbit';
+import type { BriefingId } from '../briefings/types';
 import { normalizeSearchText } from './ranking';
 import type { ParsedCommand } from './types';
 
@@ -52,9 +53,14 @@ export function parseCommand(input: string): ParsedCommand | null {
   if (['install', 'install app', 'install signal earth'].includes(normalized)) return { intent: { type: 'install' }, canonical: 'install', description: 'Install Signal Earth as an app when supported' };
 
   if (['briefing', 'briefings', 'tour', 'tours'].includes(normalized)) return { intent: { type: 'briefings' }, canonical: 'briefing', description: 'Open planetary briefings' };
-  const briefingAliases: Record<string, 'earth-now' | 'orbit-now' | 'planet-motion' | 'night-earth'> = {
-    'earth now': 'earth-now', 'briefing earth': 'earth-now', 'earth briefing': 'earth-now',
-    'orbit now': 'orbit-now', 'briefing orbit': 'orbit-now', 'orbit briefing': 'orbit-now',
+  const briefingAliases: Record<string, BriefingId> = {
+    'earth now': 'earth-now', 'briefing earth': 'earth-now', 'earth briefing': 'earth-now', 'earth right now': 'earth-now',
+    'seismic briefing': 'seismic-now', 'earthquake briefing': 'seismic-now', 'earthquakes briefing': 'seismic-now', 'briefing seismic': 'seismic-now',
+    'storm briefing': 'storm-watch', 'storms briefing': 'storm-watch', 'active storms briefing': 'storm-watch', 'briefing storms': 'storm-watch',
+    'space weather briefing': 'space-weather-now', 'briefing space weather': 'space-weather-now', 'spaceweather briefing': 'space-weather-now',
+    'above me briefing': 'above-me', 'observer briefing': 'above-me', 'my sky briefing': 'above-me',
+    'orbit now': 'orbit-now', 'briefing orbit': 'orbit-now', 'orbit briefing': 'orbit-now', 'orbit highlights': 'orbit-now',
+    'last 24h briefing': 'last-24h', 'last 24 hours briefing': 'last-24h', '24 hour briefing': 'last-24h', '24h briefing': 'last-24h',
     'planet in motion': 'planet-motion', 'briefing motion': 'planet-motion', 'motion briefing': 'planet-motion',
     'night earth': 'night-earth', 'briefing night': 'night-earth', 'night briefing': 'night-earth',
   };
@@ -107,5 +113,5 @@ export function parseCommand(input: string): ParsedCommand | null {
 
 export const COMMAND_EXAMPLES = [
   'goto tokyo', 'follow iss', 'show earthquakes', 'show clouds', 'hide aurora',
-  'mode night', 'speed 100x', 'rewind 7d', 'replay 24h', 'live', 'pause', 'reset', 'here', 'share', 'capture', 'record', 'briefing', 'earth now',
+  'mode night', 'speed 100x', 'rewind 7d', 'replay 24h', 'live', 'pause', 'reset', 'here', 'share', 'capture', 'record', 'briefing', 'earth now', 'seismic briefing', 'active storms briefing', 'space weather briefing', 'last 24h briefing',
 ];
