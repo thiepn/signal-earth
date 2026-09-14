@@ -8,6 +8,7 @@ import type { SatelliteCategory } from '../../shared/types/orbit';
 import type { LayerId, VisualMode } from '../../shared/types/layers';
 import type { EntityId } from '../../shared/types/entities';
 import { DEFAULT_WEATHER_SETTINGS, type WeatherLayerSettings } from '../weather/types';
+import { rememberCanonicalShareUrl } from '../saved-worlds/capture';
 
 export const SHARE_STATE_VERSION = 1;
 
@@ -99,7 +100,9 @@ export function buildShareUrl(currentUrl: string | URL, state: ShareViewState): 
   if (!state.showOrbitPath) q.set('op', '0');
   if (!state.showGroundTrack) q.set('gt', '0');
   q.set('ah', `${state.auroraHemispheres.north ? 'n' : ''}${state.auroraHemispheres.south ? 's' : ''}` || 'none');
-  return url.toString();
+  const serialized = url.toString();
+  rememberCanonicalShareUrl(serialized);
+  return serialized;
 }
 
 export function parseShareView(input: string | URL | URLSearchParams): ParsedShareView | null {
