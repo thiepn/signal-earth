@@ -39,5 +39,5 @@ Make the observer a first-class part of Signal Earth: answer what is happening a
 - [x] Release verification passes with **15** safe service-worker precache entries.
 - [x] Certified branch production package: approximately **13.65 MB**.
 - [x] Clean branch certification passes.
-- [ ] GitHub Pages production deployment succeeds.
+- [x] GitHub Pages production deployment succeeds.
 - [ ] Real-device visual smoke test remains a separate manual acceptance step.
