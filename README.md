@@ -14,7 +14,7 @@ The current product includes Signal Earth Now, five primary layers (Weather, Ear
 
 Time 2.0 exposes **24H / 7D / 30D** historical ranges while keeping future simulation capped at +24H. A guided **24H REPLAY** runs the previous day at 1000× and reconnects automatically to LIVE. Deep historical replay prioritizes observed Earth data; current CelesTrak OMM propagation is deliberately suppressed outside its certified ±24-hour window.
 
-Observatory UX 2.0 adds contextual one-layer-at-a-time controls, zoom-aware country/city labels and country borders, hover-before-click signal previews, a selection-driven desktop inspector, and direct mobile Search access. These are presentation and interaction improvements; they do not change source semantics.
+Observatory UX 2.0 adds contextual one-layer-at-a-time controls, zoom-aware country/city labels and country borders, hover-before-click signal previews, a selection-driven desktop inspector, and directly accessible Search on mobile. These are presentation and interaction improvements; they do not change source semantics.
 
 Automated release certification runs TypeScript validation, unit tests, the production Vite build, service-worker precache generation, and post-build release verification before Pages deployment. Real interactive browser/device acceptance remains a separate manual check.
 
@@ -41,8 +41,8 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 
 ### Mobile
 
-- compact top bar
-- persistent bottom dock prioritizing **Now / Search / Layers / Time / Here**
+- compact top bar with direct Search access
+- persistent bottom dock for **Now / Layers / Here / Time / Inspect**
 - one bottom sheet at a time; selecting a globe signal opens Inspect automatically
 - the Time sheet exposes the same timeline state and controls as desktop
 - Above Me is available from the Here dock; location permission is requested only after explicit opt-in
@@ -63,7 +63,7 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 - React/TypeScript for low-frequency UI state
 - Three.js + Globe.gl for rendering
 - presentation-only Natural Earth borders and zoom-aware geographic labels are isolated in a dedicated renderer and can fail without affecting signal layers
-- hover previews are renderer callbacks into low-frequency React UI state; high-frequency render data remains outside React
+- hover previews originate from renderer callbacks and are presented through a lightweight UI bridge; high-frequency render data remains outside React app state
 - renderer state stays behind `GlobeViewportHandle`
 - one ActionBus for application-state actions
 - one central `TimeEngine`
