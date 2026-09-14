@@ -35,15 +35,18 @@ Release work covers:
 | Vite hashes | Post-build script injects actual dist asset filenames into SW precache | Implemented |
 | Pages path | Relative Vite base + relative PWA resources support repository subpaths | Implemented |
 | Command palette | `share`, `capture`, `record`, `install` deterministic commands | Implemented |
-| Release gate | typecheck + unit tests + build + post-build production verification | Implemented |
-| GitHub Pages | deploy workflow uploads only the verified `dist/` artifact | Implemented |
+| Release gate | typecheck + unit tests + build + post-build production verification | PASS in GitHub Actions |
+| GitHub Pages workflow | deploy workflow uploads only the verified `dist/` artifact | Implemented |
 | Source syntax | Full TypeScript/TSX parse | PASS |
-| Pure release contracts | Share/capture/search-command semantic/runtime checks | PASS |
-| SW/manifest syntax | service worker/scripts/manifest static validation | PASS |
-| Production dependency install | `npm install` | BLOCKED locally by registry timeout |
-| Production Vite build | `npm run release` | PENDING successful dependency installation / CI |
-| Chromium built-app smoke test | Release artifact execution | PENDING production build |
-| Firefox/Safari/device matrix | Real execution | PENDING production build + devices |
+| TypeScript | `tsc --noEmit` | PASS in GitHub Actions |
+| Unit tests | Vitest suite | PASS — 84/84 tests |
+| Production dependency install | `npm install` on Node 22 | PASS in GitHub Actions |
+| Production Vite build | `npm run build` | PASS in GitHub Actions |
+| Service-worker precache | Generated from production `dist/` | PASS — 20 assets injected |
+| Production verifier | `npm run release:verify` | PASS — 13.40 MB site |
+| GitHub Pages site | Repository Pages source configured as GitHub Actions | PENDING one-time repository setting |
+| Chromium built-app smoke test | Release artifact execution | PENDING real-browser certification |
+| Firefox/Safari/device matrix | Real execution | PENDING real-browser/device certification |
 
 ## Share URL contract
 
@@ -137,15 +140,18 @@ npm run release:verify
 
 The GitHub Pages deploy workflow runs this same release gate before uploading `dist/`.
 
-## Local verification completed
+## CI certification — September 14, 2026
 
-- 137 TypeScript/TSX files parsed with zero syntax diagnostics at the initial Phase 15 full-source pass.
-- Strict TypeScript semantic validation passed for the new share/capture/command contracts.
-- Share URL build/parse runtime round-trip passed.
-- Release capture filename runtime check passed.
-- `share`, `capture`, `record`, `install` command parsing passed.
-- `sw.js`, precache injector and release verifier pass Node syntax checks.
-- `manifest.webmanifest` parses as valid JSON.
-- PWA icon files are valid 192×192 and 512×512 PNGs.
+The first real Node/npm release run exposed one build-only incompatibility: Vite's default IIFE worker output could not bundle satellite.js 7.x's top-level-await WASM worker path. Signal Earth now explicitly emits ES-module workers via `worker.format = 'es'`.
 
-A complete dependency build could not be run locally because `npm install` timed out against the npm registry. This is recorded as a pending release-environment validation, not converted into a false PASS.
+After that correction, GitHub Actions completed the full release gate successfully:
+
+- TypeScript validation: PASS;
+- Vitest: 28 files, 84 tests, all PASS;
+- production Vite build: PASS;
+- orbit worker emitted as a separate production chunk: PASS;
+- production service-worker precache: 20 assets injected;
+- release verification: PASS;
+- verified production site size: 13.40 MB.
+
+The only remaining deployment prerequisite is repository-level GitHub Pages enablement with **GitHub Actions** selected as the publishing source. That setting is outside the source tree and is intentionally not reported as a code failure.

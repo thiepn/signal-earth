@@ -23,7 +23,7 @@ V1 includes:
 - shareable public view URLs;
 - PNG capture and optional video recording;
 - installable/offline-capable PWA shell;
-- static GitHub Pages deployment.
+- static GitHub Pages deployment workflow.
 
 ## Runtime infrastructure
 
@@ -50,8 +50,19 @@ npm run dev
 
 ## GitHub Pages
 
-Push to `main` after enabling GitHub Pages with **GitHub Actions** as the source. `.github/workflows/deploy.yml` verifies and deploys the static `dist/` artifact.
+The repository contains a verified-artifact Pages workflow. GitHub Pages must be enabled once with **Settings → Pages → Build and deployment → Source: GitHub Actions**. Subsequent pushes to `main` run the complete release gate before `dist/` can be deployed.
 
-## Known release-environment limitation
+## Certification status
 
-The provided source was created and source-level validated in an environment where npm registry access timed out. A successful CI dependency installation/build remains the required final binary/deployment gate.
+GitHub Actions certification passed on September 14, 2026 using Node 22:
+
+- TypeScript: PASS;
+- Vitest: 84/84 tests PASS;
+- production Vite build: PASS;
+- service-worker production precache: PASS;
+- post-build release verification: PASS;
+- verified production site size: 13.40 MB.
+
+The production build uses ES-module Web Workers because satellite.js 7.x's WASM worker path requires module semantics for top-level `await`.
+
+The remaining V1 release work is operational rather than source-level: enable GitHub Pages for the repository, deploy the already-certified artifact, then perform real-browser/device smoke checks against the live URL.

@@ -6,11 +6,11 @@ Signal Earth is a static, browser-first observatory for Earth events, near-Earth
 
 ## Current status
 
-**Signal Earth V1.0.0 — Phase 15 Release** is feature-complete at the source/release-contract level.
+**Signal Earth V1.0.0 — Phase 15 Release** is feature-complete and passes the canonical production release gate in GitHub Actions.
 
-V1 now includes shareable public view URLs, clean PNG capture, optional 10-second browser recording, PWA install metadata/icons, a generated production precache for offline app-shell use, release verification scripts, and a GitHub Pages workflow that deploys only after the full release gate passes.
+V1 includes shareable public view URLs, clean PNG capture, optional 10-second browser recording, PWA install metadata/icons, a generated production precache for offline app-shell use, release verification scripts, and a GitHub Pages workflow that deploys only after the full release gate passes.
 
-The current execution environment still cannot install npm dependencies because registry access times out. The source/runtime-contract checks are complete, but the production Vite bundle and real browser/device matrix remain explicitly pending CI/a successful dependency environment. See `docs/PHASE-15-ACCEPTANCE.md` and `docs/RELEASE-V1.md`.
+CI certification on September 14, 2026 passed TypeScript validation, all 84 unit tests, the production Vite build, service-worker precache generation, and post-build release verification. The verified production site is 13.40 MB. The only remaining hosting prerequisite is the repository's one-time GitHub Pages setting: **Settings → Pages → Build and deployment → Source: GitHub Actions**. Real browser/device acceptance remains tracked separately from automated release certification. See `docs/PHASE-15-ACCEPTANCE.md` and `docs/RELEASE-V1.md`.
 
 ## Current interaction model
 
@@ -60,7 +60,7 @@ The current execution environment still cannot install npm dependencies because 
 - global simulation window is approximately ±24 hours
 - observed / propagated / forecast semantics remain distinct
 - high-frequency simulation/renderer data bypasses React app state
-- satellite propagation runs in a dedicated Web Worker via satellite.js
+- satellite propagation runs in a dedicated ES-module Web Worker via satellite.js
 - speed-aware predictive ephemeris windows drive render-time orbit interpolation
 - large timeline seeks invalidate stale orbital prediction state
 - CelesTrak OMM catalogs obey a hard two-hour minimum fetch interval
