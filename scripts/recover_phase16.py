@@ -1,6 +1,5 @@
 from pathlib import Path
 import subprocess
-import textwrap
 
 start_marker = "          python <<'PY'\n"
 end_marker = "\n          PY\n\n      - name: Commit Phase 16"
@@ -28,6 +27,7 @@ if source is None:
 
 start = source.index(start_marker) + len(start_marker)
 end = source.index(end_marker, start)
-script = textwrap.dedent(source[start:end])
+raw = source[start:end]
+script = '\n'.join(line[10:] if line.startswith('          ') else line for line in raw.splitlines()) + '\n'
 Path('/tmp/phase16.py').write_text(script, encoding='utf-8')
 subprocess.run(['python', '/tmp/phase16.py'], check=True)
