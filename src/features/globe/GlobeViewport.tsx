@@ -57,6 +57,7 @@ interface GlobeViewportProps {
   selectedEntityId: EntityId | null;
   orbitCatalog: OrbitCatalog | null;
   orbitEnabled: boolean;
+  orbitTemporalAvailable: boolean;
   activeOrbitCategories: SatelliteCategory[];
   orbitScaleMode: OrbitScaleMode;
   orbitTrailMode: OrbitTrailMode;
@@ -181,6 +182,13 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
 
   useEffect(() => { orbitRef.current?.setEnabled(props.orbitEnabled); requestOrbitUpdateRef.current?.(true); }, [props.orbitEnabled]);
   useEffect(() => {
+    if (!props.orbitTemporalAvailable) {
+      callbacksRef.current.onObserverSky?.(null);
+      callbacksRef.current.onObserverPasses?.(null);
+    }
+    requestOrbitUpdateRef.current?.(true);
+  }, [props.orbitTemporalAvailable]);
+  useEffect(() => {
     orbitRef.current?.setActiveCategories(props.activeOrbitCategories);
     orbitClientRef.current?.setActiveCategories(props.activeOrbitCategories);
     requestOrbitUpdateRef.current?.(true);
@@ -193,7 +201,7 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
     const client = orbitClientRef.current;
     orbit?.setSelected(props.selectedEntityId);
     const id = props.selectedEntityId;
-    if (id && String(id).startsWith('satellite:')) {
+    if (id && String(id).startsWith('satellite:') && props.orbitTemporalAvailable) {
       const timestamp = callbacksRef.current.getSimulationTime();
       client?.requestTrack(id, timestamp, { force: true, kind: 'orbit' });
       if (props.orbitTrailMode !== 'off') client?.requestTrail(id, timestamp, props.orbitTrailMode, { force: true });
@@ -205,18 +213,18 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
       client?.clearTrackRequest();
       engineRef.current?.stopWorldTracking(true);
     }
-  }, [props.selectedEntityId]);
+  }, [props.orbitTemporalAvailable, props.selectedEntityId]);
 
   useEffect(() => {
     const id = props.selectedEntityId;
     const client = orbitClientRef.current;
     const orbit = orbitRef.current;
-    if (!id || !String(id).startsWith('satellite:') || props.orbitTrailMode === 'off') {
+    if (!props.orbitTemporalAvailable || !id || !String(id).startsWith('satellite:') || props.orbitTrailMode === 'off') {
       orbit?.setTrail(null);
       return;
     }
     client?.requestTrail(id, callbacksRef.current.getSimulationTime(), props.orbitTrailMode, { force: true });
-  }, [props.orbitTrailMode, props.selectedEntityId]);
+  }, [props.orbitTemporalAvailable, props.orbitTrailMode, props.selectedEntityId]);
 
   useEffect(() => {
     // Playback-profile changes should be reflected immediately. Timeline seeks
@@ -234,14 +242,14 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
 
   useEffect(() => {
     const client = orbitClientRef.current;
-    if (!client || !props.observerLocation || !props.orbitCatalog?.satellites.length) {
+    if (!props.orbitTemporalAvailable || !client || !props.observerLocation || !props.orbitCatalog?.satellites.length) {
       callbacksRef.current.onObserverPasses?.(null);
       return;
     }
     const iss = props.orbitCatalog.satellites.find((satellite) => satellite.noradId === '25544' || /ISS \(ZARYA\)|INTERNATIONAL SPACE STATION/i.test(satellite.name));
     if (!iss) { callbacksRef.current.onObserverPasses?.(null); return; }
     client.requestPasses(iss.id, props.observerLocation, props.observerPassAnchor, { horizonHours: 24, minElevationDeg: 5 });
-  }, [props.observerLocation, props.observerPassAnchor, props.orbitCatalog]);
+  }, [props.observerLocation, props.observerPassAnchor, props.orbitCatalog, props.orbitTemporalAvailable]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -333,7 +341,7 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
         const plan = makeTemporalSamplePlan(simulationTime, clock);
         orbitClient.requestWindow(plan.startTimestamp, plan.endTimestamp, plan.sampleCount);
         const selectedId = callbacksRef.current.selectedEntityId;
-        if (selectedId && String(selectedId).startsWith('satellite:')) {
+        if (callbacksRef.current.orbitTemporalAvailable && selectedId && String(selectedId).startsWith('satellite:')) {
           const profile = orbitPlaybackProfile(clock);
           if (discontinuity || nowPerformance - lastTrackRealTime >= profile.trackCadenceMs) {
             orbitClient.requestTrack(selectedId, simulationTime, { force: true, kind: 'orbit', samples: 145 });
@@ -345,7 +353,7 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
       }
 
       const observerLocation = callbacksRef.current.observerLocation;
-      if (observerLocation && (force || nowPerformance - lastObserverRealTime >= 2_000)) {
+      if (observerLocation && callbacksRef.current.orbitTemporalAvailable && (force || nowPerformance - lastObserverRealTime >= 2_000)) {
         orbitClient.requestObserverSky(observerLocation, simulationTime, { minElevationDeg: 0, maxResults: 64 });
         lastObserverRealTime = nowPerformance;
       }

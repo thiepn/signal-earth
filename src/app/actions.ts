@@ -11,6 +11,7 @@ export type AppAction =
   | { type: 'CLEAR_SELECTION' }
   | { type: 'SET_TIME'; timestamp: number }
   | { type: 'SET_TIME_SPEED'; speed: SimulationSpeed }
+  | { type: 'START_REPLAY_TO_LIVE'; fromTimestamp: number; speed: Exclude<SimulationSpeed, 0> }
   | { type: 'RETURN_LIVE' }
   | { type: 'SYNC_CLOCK'; clock: SimulationClockSnapshot }
   | { type: 'ENABLE_LAYER'; layer: LayerId }

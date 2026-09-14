@@ -6,36 +6,36 @@ Signal Earth is a static, browser-first observatory for Earth events, near-Earth
 
 ## Current status
 
-**Signal Earth V1.0.0 — Phase 15 Release** is production-built, release-certified, and deployed through GitHub Pages.
+**Signal Earth v1.3.0 — Phase 18 Time 2.0** is production-built and release-certified for GitHub Pages.
 
 Live deployment: **https://thiepn.dev/signal-earth/**
 
-V1 includes shareable public view URLs, clean PNG capture, optional 10-second browser recording, PWA install metadata/icons, a generated production precache for offline app-shell use, release verification scripts, and a GitHub Pages workflow that deploys only after the full release gate passes.
+The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), observer-relative Above Me tools, shareable public views, PNG capture, optional 10-second recording, PWA/offline-shell support, and Time 2.0 historical replay.
 
-GitHub Actions certification passes TypeScript validation, all 84 unit tests, the production Vite build, service-worker precache generation, and post-build release verification. The verified production site is 13.40 MB.
+Time 2.0 exposes **24H / 7D / 30D** historical ranges while keeping future simulation capped at +24H. A guided **24H REPLAY** runs the previous day at 1000× and reconnects automatically to LIVE. Deep historical replay prioritizes observed Earth data; current CelesTrak OMM propagation is deliberately suppressed outside its certified ±24-hour window.
 
-A post-deploy Pages-artifact audit also caught and fixed a service-worker packaging edge case: hidden `.gitkeep` files were previously included in the generated precache even though GitHub Pages omits them from its deployment artifact. The generator now excludes hidden/non-runtime files and the release verifier rejects unsafe precache entries. The deployed artifact contains 15 safe precache entries with zero missing files.
-
-Real interactive browser/device acceptance remains separate from automated release certification. See `docs/PHASE-15-ACCEPTANCE.md` and `docs/RELEASE-V1.md`.
+Automated release certification runs TypeScript validation, unit tests, the production Vite build, service-worker precache generation, and post-build release verification before Pages deployment. Real interactive browser/device acceptance remains a separate manual check.
 
 ## Current interaction model
 
 ### Desktop
 
 - top bar: app/time status, current UTC, search, planetary briefings, Above Me, display settings
-- left: four primary signal layers with USGS earthquake, NASA EONET, CelesTrak orbit, and NOAA SWPC/aurora controls
+- left: five primary layers with NASA GIBS weather, USGS earthquakes, NASA EONET events, CelesTrak orbit, and NOAA SWPC/aurora controls
 - right: selected-object inspector
-- bottom: interactive ±24 h simulation timeline
+- bottom: Time 2.0 timeline with 24H / 7D / 30D replay ranges and a +24H future cap
 - globe: drag/pinch/scroll navigation; click earthquakes, NASA natural events, or propagated satellites to inspect them; click Earth to create a surface target
 
 ### Timeline
 
-- drag the timeline from −24h to +24h
-- presets: −24h, −6h, −1h, NOW, +6h, +24h
+- choose a **24H**, **7D**, or **30D** historical range
+- future simulation remains capped at **+24H**
+- range-aware presets and scrub precision
 - playback: 1×, 10×, 100×, 1000×
-- seeking pauses at the chosen timestamp
-- LIVE explicitly reconnects to wall time
-- playback stops safely at timeline boundaries
+- **24H REPLAY** plays the previous day at 1000× and stops automatically at LIVE
+- visible earthquake/event counts update with simulation time
+- deep replay uses observed Earth history; Orbit is explicitly unavailable beyond ±24H
+- seeking pauses at the chosen timestamp; LIVE explicitly reconnects to wall time
 
 ### Mobile
 
@@ -63,7 +63,7 @@ Real interactive browser/device acceptance remains separate from automated relea
 - renderer state stays behind `GlobeViewportHandle`
 - one ActionBus for application-state actions
 - one central `TimeEngine`
-- global simulation window is approximately ±24 hours
+- global simulation window supports 30 days of historical replay and 24 hours of future simulation
 - observed / propagated / forecast semantics remain distinct
 - high-frequency simulation/renderer data bypasses React app state
 - satellite propagation runs in a dedicated ES-module Web Worker via satellite.js
@@ -133,6 +133,9 @@ The local Earth textures are stylized derivatives of public-domain Natural Earth
 - [`docs/PHASE-13-ACCEPTANCE.md`](docs/PHASE-13-ACCEPTANCE.md)
 - [`docs/PHASE-14-ACCEPTANCE.md`](docs/PHASE-14-ACCEPTANCE.md)
 - [`docs/PHASE-15-ACCEPTANCE.md`](docs/PHASE-15-ACCEPTANCE.md)
+- [`docs/PHASE-16-ACCEPTANCE.md`](docs/PHASE-16-ACCEPTANCE.md)
+- [`docs/PHASE-17-ACCEPTANCE.md`](docs/PHASE-17-ACCEPTANCE.md)
+- [`docs/PHASE-18-ACCEPTANCE.md`](docs/PHASE-18-ACCEPTANCE.md)
 - [`docs/RELEASE-V1.md`](docs/RELEASE-V1.md)
 
 ## Living Earth — v1.2

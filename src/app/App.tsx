@@ -25,6 +25,7 @@ import type { EarthquakeFeed, EarthquakeRecord, EarthquakeTimeWindow } from '../
 import { filterEarthquakesAtSimulationTime, filterEarthquakesByMagnitude } from '../features/seismic/filter';
 import { earthquakeToSignalEntity } from '../features/seismic/types';
 import { TimelineControls } from '../features/timeline/TimelineControls';
+import { earthquakeWindowForTimelineRange, orbitTemporallyAvailable, rangeForOffsetHours, TIMELINE_RANGES, widenEarthquakeWindow, type TimelineRange } from '../features/timeline/timeline';
 import { EarthquakeService } from '../providers/usgs';
 import { NaturalEventService, EONET_CACHE_POLICY } from '../providers/eonet';
 import { CelesTrakService } from '../providers/celestrak';
@@ -192,6 +193,8 @@ export function App() {
   const [offlineReady, setOfflineReady] = useState(false);
   const [online, setOnline] = useState(() => navigator.onLine);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [timelineRange, setTimelineRangeState] = useState<TimelineRange>(initialShareRef.current?.timelineRange ?? 'day');
+  const [replay24Active, setReplay24Active] = useState(false);
 
   const [earthquakeWindow, setEarthquakeWindow] = useState<EarthquakeTimeWindow>(initialShareRef.current?.earthquakeWindow ?? 'day');
   const [earthquakeMagnitude, setEarthquakeMagnitude] = useState(initialShareRef.current?.earthquakeMagnitude ?? 2.5);
@@ -284,13 +287,15 @@ export function App() {
       timeEngineRef.current.setTime(action.timestamp);
     } else if (action.type === 'SET_TIME_SPEED') {
       timeEngineRef.current.setSpeed(action.speed);
+    } else if (action.type === 'START_REPLAY_TO_LIVE') {
+      timeEngineRef.current.startReplayToLive(action.fromTimestamp, action.speed);
     } else if (action.type === 'RETURN_LIVE') {
       timeEngineRef.current.returnLive();
     }
 
     dispatch(action);
 
-    if (action.type === 'SET_TIME' || action.type === 'SET_TIME_SPEED' || action.type === 'RETURN_LIVE') {
+    if (action.type === 'SET_TIME' || action.type === 'SET_TIME_SPEED' || action.type === 'START_REPLAY_TO_LIVE' || action.type === 'RETURN_LIVE') {
       dispatch({ type: 'SYNC_CLOCK', clock: timeEngineRef.current.snapshot() });
     }
   }), []);
@@ -578,6 +583,19 @@ export function App() {
   const naturalEvents = naturalEventSnapshot?.data.events ?? [];
   const weatherStormEvents = useMemo(() => naturalEvents.filter((event) => event.category === 'severe-storm'), [naturalEvents]);
   const simulationTime = appState.clock?.simulationTime ?? timeEngineRef.current.currentTime;
+  const orbitTimeAvailable = orbitTemporallyAvailable(appState.clock);
+
+  useEffect(() => {
+    if (orbitTimeAvailable) return;
+    setSelectedSatelliteTelemetry(null);
+    setObserverSky(null);
+    setObserverPassForecast(null);
+    const selectedId = appState.selection.selectedId;
+    if (selectedId && String(selectedId).startsWith('satellite:')) {
+      emit({ type: 'CLEAR_SELECTION' });
+      if (mobileSheet === 'inspector') setMobileSheet(null);
+    }
+  }, [appState.selection.selectedId, emit, mobileSheet, orbitTimeAvailable]);
 
   // Pass prediction is expensive enough that it should not recompute at render-clock cadence.
   // Re-anchor automatically on explicit paused seeks and when returning to LIVE; accelerated
@@ -964,31 +982,66 @@ export function App() {
     emit({ type: 'SET_VISUAL_MODE', mode });
   }, [emit]);
 
+  const selectTimelineRange = useCallback((range: TimelineRange) => {
+    setReplay24Active(false);
+    setTimelineRangeState(range);
+    setEarthquakeWindow((current) => widenEarthquakeWindow(current, earthquakeWindowForTimelineRange(range)));
+    const snapshot = timeEngineRef.current.snapshot();
+    const offsetHours = (snapshot.simulationTime - snapshot.realTime) / 3_600_000;
+    const minHours = -TIMELINE_RANGES[range].pastHours;
+    if (offsetHours < minHours) {
+      emit({ type: 'SET_TIME_SPEED', speed: 0 });
+      emit({ type: 'SET_TIME', timestamp: snapshot.realTime + minHours * 3_600_000 });
+    }
+  }, [emit]);
+
   const setTimelineOffset = useCallback((hours: number) => {
+    setReplay24Active(false);
     if (Math.abs(hours) < 0.01) {
       emit({ type: 'RETURN_LIVE' });
       return;
     }
+
+    const requiredRange = rangeForOffsetHours(hours);
+    if (TIMELINE_RANGES[requiredRange].pastHours > TIMELINE_RANGES[timelineRange].pastHours) {
+      setTimelineRangeState(requiredRange);
+    }
+    setEarthquakeWindow((current) => widenEarthquakeWindow(current, earthquakeWindowForTimelineRange(requiredRange)));
 
     // Scrubbing is an explicit seek operation. Freeze at the selected moment
     // so the thumb does not drift underneath the user while they are seeking.
     emit({ type: 'SET_TIME_SPEED', speed: 0 });
     const realTime = timeEngineRef.current.snapshot().realTime;
     emit({ type: 'SET_TIME', timestamp: realTime + hours * 3_600_000 });
-  }, [emit]);
+  }, [emit, timelineRange]);
 
   const toggleTimePlayback = useCallback(() => {
+    setReplay24Active(false);
     const snapshot = timeEngineRef.current.snapshot();
     emit({ type: 'SET_TIME_SPEED', speed: snapshot.isPlaying ? 0 : 1 });
   }, [emit]);
 
   const setTimeSpeed = useCallback((speed: SimulationSpeed) => {
+    setReplay24Active(false);
     emit({ type: 'SET_TIME_SPEED', speed });
   }, [emit]);
 
   const returnLive = useCallback(() => {
+    setReplay24Active(false);
     emit({ type: 'RETURN_LIVE' });
   }, [emit]);
+
+  const replayLast24Hours = useCallback(() => {
+    setTimelineRangeState('day');
+    setEarthquakeWindow((current) => widenEarthquakeWindow(current, 'day'));
+    setReplay24Active(true);
+    const realTime = timeEngineRef.current.snapshot().realTime;
+    emit({ type: 'START_REPLAY_TO_LIVE', fromTimestamp: realTime - 24 * 3_600_000, speed: 1000 });
+  }, [emit]);
+
+  useEffect(() => {
+    if (replay24Active && (appState.clock?.mode === 'live' || appState.clock?.isPlaying === false)) setReplay24Active(false);
+  }, [appState.clock?.isPlaying, appState.clock?.mode, replay24Active]);
 
   const executeBriefingInstruction = useCallback(async (instruction: BriefingInstruction, signal: AbortSignal) => {
     if (signal.aborted) return;
@@ -1286,6 +1339,7 @@ export function App() {
       showGroundTrack,
       auroraHemispheres,
       weatherSettings: atmosphereSettings,
+      timelineRange,
     };
     try {
       const url = buildShareUrl(window.location.href, shareState);
@@ -1294,7 +1348,7 @@ export function App() {
     } catch (error) {
       pushToast('Could not copy view link', error instanceof Error ? error.message : 'Clipboard access failed.', 'warning');
     }
-  }, [activeNaturalEventCategories, activeOrbitCategories, appState.clock, appState.layers, appState.selection.selectedId, appState.visualMode, atmosphereSettings, auroraHemispheres, earthquakeMagnitude, earthquakeWindow, orbitScaleMode, orbitTrailMode, pointOfView, pushToast, showGroundTrack, showOrbitPath]);
+  }, [activeNaturalEventCategories, activeOrbitCategories, appState.clock, appState.layers, appState.selection.selectedId, appState.visualMode, atmosphereSettings, auroraHemispheres, earthquakeMagnitude, earthquakeWindow, orbitScaleMode, orbitTrailMode, pointOfView, pushToast, showGroundTrack, showOrbitPath, timelineRange]);
 
   const captureSnapshot = useCallback(async () => {
     try {
@@ -1407,6 +1461,7 @@ export function App() {
     if (intent.type === 'live') { emit({ type: 'RETURN_LIVE' }); return; }
     if (intent.type === 'pause') { emit({ type: 'SET_TIME_SPEED', speed: 0 }); return; }
     if (intent.type === 'play') { emit({ type: 'SET_TIME_SPEED', speed: 1 }); return; }
+    if (intent.type === 'replay-day') { replayLast24Hours(); return; }
     if (intent.type === 'speed') { emit({ type: 'SET_TIME_SPEED', speed: intent.speed }); return; }
     if (intent.type === 'time-offset') { setTimelineOffset(intent.hours); return; }
     if (intent.type === 'visual-mode') { emit({ type: 'SET_VISUAL_MODE', mode: intent.mode }); return; }
@@ -1460,7 +1515,7 @@ export function App() {
       }
       pushToast('No local match', `No loaded signal, city, country, category or command matches “${intent.query}”.`, 'warning');
     }
-  }, [captureSnapshot, emit, executeSearchResult, installApp, installPrompt, openHere, orbitSnapshot, pushToast, recordClip, resetGlobe, searchIndex, setTimelineOffset, shareCurrentView, startBriefing]);
+  }, [captureSnapshot, emit, executeSearchResult, installApp, installPrompt, openHere, orbitSnapshot, pushToast, recordClip, replayLast24Hours, resetGlobe, searchIndex, setTimelineOffset, shareCurrentView, startBriefing]);
 
   useEffect(() => {
     if (!pendingSearchIntent || !orbitSnapshot) return;
@@ -1531,6 +1586,7 @@ export function App() {
     categoryCounts: orbitSnapshot?.data.categoryCounts ?? emptyOrbitCounts,
     totalCount: orbitSnapshot?.data.satellites.length ?? 0,
     validCount: orbitStats.validCount,
+    temporalAvailable: orbitTimeAvailable,
     freshness: appState.providerStatus.celestrak,
     sourceUpdatedAt: orbitSnapshot?.sourceUpdatedAt,
     loading: orbitLoading,
@@ -1625,7 +1681,8 @@ export function App() {
           simulationTime={simulationTime}
           selectedEntityId={appState.selection.selectedId}
           orbitCatalog={orbitSnapshot?.data ?? null}
-          orbitEnabled={appState.layers.orbit}
+          orbitEnabled={appState.layers.orbit && orbitTimeAvailable}
+          orbitTemporalAvailable={orbitTimeAvailable}
           activeOrbitCategories={activeOrbitCategoryList}
           orbitScaleMode={orbitScaleMode}
           orbitTrailMode={orbitTrailMode}
@@ -1684,10 +1741,16 @@ export function App() {
       <div className="desktop-timeline">
         <TimelineControls
           clock={appState.clock}
+          range={timelineRange}
+          onRangeChange={selectTimelineRange}
           onSetOffsetHours={setTimelineOffset}
           onTogglePlay={toggleTimePlayback}
           onSetSpeed={setTimeSpeed}
           onReturnLive={returnLive}
+          onReplayLast24Hours={replayLast24Hours}
+          replayActive={replay24Active}
+          orbitAvailable={orbitTimeAvailable}
+          activity={{ earthquakes: visibleEarthquakes.length, events: visibleNaturalEvents.length }}
         />
       </div>
 
@@ -1731,7 +1794,7 @@ export function App() {
       </BottomSheet>
 
       <BottomSheet open={mobileSheet === 'time'} eyebrow="SIMULATION" title="Time" onClose={() => setMobileSheet(null)}>
-        <TimelineControls compact clock={appState.clock} onSetOffsetHours={setTimelineOffset} onTogglePlay={toggleTimePlayback} onSetSpeed={setTimeSpeed} onReturnLive={returnLive} />
+        <TimelineControls compact clock={appState.clock} range={timelineRange} onRangeChange={selectTimelineRange} onSetOffsetHours={setTimelineOffset} onTogglePlay={toggleTimePlayback} onSetSpeed={setTimeSpeed} onReturnLive={returnLive} onReplayLast24Hours={replayLast24Hours} replayActive={replay24Active} orbitAvailable={orbitTimeAvailable} activity={{ earthquakes: visibleEarthquakes.length, events: visibleNaturalEvents.length }} />
       </BottomSheet>
 
       <BottomSheet open={mobileSheet === 'here'} eyebrow="LOCAL OBSERVATORY" title="Above Me" onClose={() => setMobileSheet(null)}>

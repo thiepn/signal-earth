@@ -24,12 +24,14 @@ const MODES: Record<string, VisualMode> = {
 };
 
 function parseOffset(raw: string): number | null {
-  const match = raw.match(/^([+-]?\d+(?:\.\d+)?)\s*(h|hr|hrs|hour|hours|m|min|mins|minute|minutes)?$/i);
+  const match = raw.match(/^([+-]?\d+(?:\.\d+)?)\s*(h|hr|hrs|hour|hours|m|min|mins|minute|minutes|d|day|days)?$/i);
   if (!match) return null;
   const value = Number(match[1]);
   if (!Number.isFinite(value)) return null;
   const unit = match[2]?.toLowerCase();
-  return unit?.startsWith('m') ? value / 60 : value;
+  if (unit?.startsWith('m')) return value / 60;
+  if (unit?.startsWith('d')) return value * 24;
+  return value;
 }
 
 export function parseCommand(input: string): ParsedCommand | null {
@@ -40,6 +42,7 @@ export function parseCommand(input: string): ParsedCommand | null {
   if (['help', '?', 'commands'].includes(normalized)) return { intent: { type: 'help' }, canonical: 'help', description: 'Show command help' };
   if (['reset', 'reset globe', 'home'].includes(normalized)) return { intent: { type: 'reset' }, canonical: 'reset', description: 'Return to the global Earth view' };
   if (['live', 'now', 'return live', 'go live'].includes(normalized)) return { intent: { type: 'live' }, canonical: 'live', description: 'Return the simulation to live time' };
+  if (['replay 24h', 'replay day', 'last 24 hours', 'play last 24h'].includes(normalized)) return { intent: { type: 'replay-day' }, canonical: 'replay 24h', description: 'Replay the previous 24 hours and stop at LIVE' };
   if (['pause', 'stop time', 'freeze'].includes(normalized)) return { intent: { type: 'pause' }, canonical: 'pause', description: 'Pause simulation time' };
   if (['play', 'resume', 'resume time'].includes(normalized)) return { intent: { type: 'play' }, canonical: 'play', description: 'Resume simulation at 1×' };
   if (['here', 'above me', 'my sky'].includes(normalized)) return { intent: { type: 'here' }, canonical: 'here', description: 'Open the local observatory' };
@@ -68,7 +71,8 @@ export function parseCommand(input: string): ParsedCommand | null {
     const hours = parseOffset(offset[2]!);
     if (hours !== null) {
       const backwards = ['back', 'rewind', 'past'].includes(offset[1]!);
-      const signed = Math.max(-24, Math.min(24, Math.abs(hours) * (backwards ? -1 : 1)));
+      const absolute = Math.abs(hours);
+      const signed = backwards ? -Math.min(30 * 24, absolute) : Math.min(24, absolute);
       return { intent: { type: 'time-offset', hours: signed }, canonical: `${backwards ? 'rewind' : 'forward'} ${Math.abs(hours)}h`, description: `Seek ${Math.abs(hours)} hour${Math.abs(hours) === 1 ? '' : 's'} ${backwards ? 'back' : 'forward'}` };
     }
   }
@@ -103,5 +107,5 @@ export function parseCommand(input: string): ParsedCommand | null {
 
 export const COMMAND_EXAMPLES = [
   'goto tokyo', 'follow iss', 'show earthquakes', 'show clouds', 'hide aurora',
-  'mode night', 'speed 100x', 'rewind 6h', 'live', 'pause', 'reset', 'here', 'share', 'capture', 'record', 'briefing', 'earth now',
+  'mode night', 'speed 100x', 'rewind 7d', 'replay 24h', 'live', 'pause', 'reset', 'here', 'share', 'capture', 'record', 'briefing', 'earth now',
 ];

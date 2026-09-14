@@ -39,6 +39,7 @@ export type CommandIntent =
   | { type: 'live' }
   | { type: 'pause' }
   | { type: 'play' }
+  | { type: 'replay-day' }
   | { type: 'speed'; speed: 1 | 10 | 100 | 1000 }
   | { type: 'time-offset'; hours: number }
   | { type: 'visual-mode'; mode: VisualMode }

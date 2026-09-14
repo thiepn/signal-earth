@@ -17,6 +17,9 @@ describe('deterministic search commands', () => {
   it('parses simulation controls', () => {
     expect(parseCommand('speed 100x')?.intent).toEqual({ type: 'speed', speed: 100 });
     expect(parseCommand('rewind 6h')?.intent).toEqual({ type: 'time-offset', hours: -6 });
+    expect(parseCommand('rewind 7d')?.intent).toEqual({ type: 'time-offset', hours: -168 });
+    expect(parseCommand('forward 7d')?.intent).toEqual({ type: 'time-offset', hours: 24 });
+    expect(parseCommand('replay 24h')?.intent).toEqual({ type: 'replay-day' });
     expect(parseCommand('night')?.intent).toEqual({ type: 'visual-mode', mode: 'night' });
     expect(parseCommand('live')?.intent).toEqual({ type: 'live' });
   });

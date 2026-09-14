@@ -3,6 +3,7 @@ import type { EarthquakeTimeWindow } from '../seismic/types';
 import type { NaturalEventCategory } from '../natural-events/types';
 import type { OrbitScaleMode } from '../orbit/interaction';
 import type { OrbitTrailMode } from '../orbit/playback';
+import type { TimelineRange } from '../timeline/timeline';
 import type { SatelliteCategory } from '../../shared/types/orbit';
 import type { LayerId, VisualMode } from '../../shared/types/layers';
 import type { EntityId } from '../../shared/types/entities';
@@ -15,6 +16,7 @@ export interface ShareViewState {
   visualMode: VisualMode;
   layers: Record<LayerId, boolean>;
   weatherSettings: WeatherLayerSettings;
+  timelineRange: TimelineRange;
   clock: SimulationClockSnapshot | null;
   selectedEntityId: EntityId | null;
   earthquakeWindow: EarthquakeTimeWindow;
@@ -33,6 +35,7 @@ export type ParsedShareView = Partial<ShareViewState>;
 const LAYERS: LayerId[] = ['weather', 'earthquakes', 'events', 'orbit', 'aurora'];
 const MODES: VisualMode[] = ['earth', 'signal', 'night', 'wireframe'];
 const WINDOWS: EarthquakeTimeWindow[] = ['hour', 'day', 'week', 'month'];
+const TIMELINE_RANGE_IDS: TimelineRange[] = ['day', 'week', 'month'];
 const SAT_CATEGORIES: SatelliteCategory[] = ['stations', 'weather', 'earth-observation', 'navigation', 'science', 'communications'];
 const NATURAL_CATEGORIES: NaturalEventCategory[] = ['severe-storm', 'wildfire', 'volcano'];
 const TRAILS: OrbitTrailMode[] = ['off', 'past-10m', 'past-orbit', 'next-orbit'];
@@ -77,6 +80,7 @@ export function buildShareUrl(currentUrl: string | URL, state: ShareViewState): 
   q.set('layers', enabledList(state.layers, LAYERS));
   q.set('wx', `${state.weatherSettings.clouds ? 'c' : ''}${state.weatherSettings.precipitation ? 'p' : ''}${state.weatherSettings.stormTracks ? 's' : ''}` || 'none');
   q.set('wo', fixed(state.weatherSettings.opacity, 2));
+  q.set('tr', state.timelineRange);
 
   if (!state.clock || state.clock.mode === 'live') {
     q.set('time', 'live');
@@ -120,6 +124,9 @@ export function parseShareView(input: string | URL | URLSearchParams): ParsedSha
 
   const layers = enabledMap(q.get('layers'), LAYERS);
   if (layers) parsed.layers = layers;
+
+  const timelineRange = q.get('tr') as TimelineRange | null;
+  if (timelineRange && TIMELINE_RANGE_IDS.includes(timelineRange)) parsed.timelineRange = timelineRange;
 
   const weatherFlags = q.get('wx');
   const weatherOpacity = finiteNumber(q.get('wo'));

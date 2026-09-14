@@ -7,6 +7,7 @@ const state: ShareViewState = {
   visualMode: 'night',
   layers: { weather: true, earthquakes: true, events: false, orbit: true, aurora: true },
   weatherSettings: { clouds: true, precipitation: true, stormTracks: false, opacity: 0.65 },
+  timelineRange: 'week',
   clock: { mode: 'simulation', realTime: 1_000, simulationTime: 2_000, speed: 100, isPlaying: true },
   selectedEntityId: asEntityId('satellite:25544'),
   earthquakeWindow: 'day',
@@ -30,6 +31,7 @@ describe('share state', () => {
     expect(parsed.layers?.events).toBe(false);
     expect(parsed.layers?.weather).toBe(true);
     expect(parsed.weatherSettings).toEqual({ clouds: true, precipitation: true, stormTracks: false, opacity: 0.65 });
+    expect(parsed.timelineRange).toBe('week');
     expect(parsed.selectedEntityId).toBe('satellite:25544');
     expect(parsed.orbitScaleMode).toBe('visual');
     expect(parsed.orbitTrailMode).toBe('past-10m');
