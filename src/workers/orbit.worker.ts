@@ -11,6 +11,9 @@ import {
   gstime,
   json2satrec,
   propagate,
+  jday,
+  sunPos,
+  shadowFraction as eclipseFraction,
   type OMMJsonObject,
   type SatRec,
 } from 'satellite.js';
@@ -41,7 +44,7 @@ export type OrbitWorkerResponse =
   | { type: 'WINDOW'; sequence: number; startTimestamp: number; endTimestamp: number; sampleCount: number; objectCount: number; indices: Uint32Array; positions: Float32Array; validCount: number; errorCount: number }
   | { type: 'TRACK'; sequence: number; satelliteId: string; kind: OrbitTrackKind; centerTimestamp: number; startTimestamp: number; endTimestamp: number; periodMinutes: number; sampleCount: number; positions: Float32Array }
   | { type: 'OBSERVER_SKY'; sequence: number; timestamp: number; visibleCount: number; indices: Uint32Array; lookAngles: Float32Array }
-  | { type: 'PASSES'; sequence: number; satelliteId: string; startTime: number; horizonHours: number; passes: Array<{ startTime: number; endTime: number; maxTime: number; maxElevationDeg: number; riseAzimuthDeg: number; maxAzimuthDeg: number; setAzimuthDeg: number }> }
+  | { type: 'PASSES'; sequence: number; satelliteId: string; startTime: number; horizonHours: number; passes: Array<{ startTime: number; endTime: number; maxTime: number; maxElevationDeg: number; riseAzimuthDeg: number; maxAzimuthDeg: number; setAzimuthDeg: number; maxShadowFraction: number }> }
   | { type: 'ERROR'; message: string; sequence?: number };
 
 interface WorkerRecord {
@@ -236,8 +239,6 @@ function generateTrack(satelliteId: string, timestamp: number, sequence: number,
   }, [positions.buffer]);
 }
 
-
-
 function observerGeodetic(observer: { lat: number; lon: number; altitudeKm: number }) {
   return {
     latitude: degreesToRadians(observer.lat),
@@ -246,7 +247,14 @@ function observerGeodetic(observer: { lat: number; lon: number; altitudeKm: numb
   };
 }
 
-interface ObserverLook { azimuthDeg: number; elevationDeg: number; rangeKm: number; altitudeKm: number; speedKmS: number }
+interface ObserverLook {
+  azimuthDeg: number;
+  elevationDeg: number;
+  rangeKm: number;
+  altitudeKm: number;
+  speedKmS: number;
+  shadowFraction: number;
+}
 
 function lookAnglesFor(record: WorkerRecord, timestamp: number, observer: { lat: number; lon: number; altitudeKm: number }): ObserverLook | null {
   const date = new Date(timestamp);
@@ -261,8 +269,10 @@ function lookAnglesFor(record: WorkerRecord, timestamp: number, observer: { lat:
   const rangeKm = look.rangeSat;
   const altitudeKm = geodetic.height;
   const speedKmS = Math.hypot(result.velocity.x, result.velocity.y, result.velocity.z);
-  if (![azimuthDeg, elevationDeg, rangeKm, altitudeKm, speedKmS].every(Number.isFinite)) return null;
-  return { azimuthDeg, elevationDeg, rangeKm, altitudeKm, speedKmS };
+  const sun = sunPos(jday(date));
+  const shadowFraction = eclipseFraction(sun.rsun, result.position);
+  if (![azimuthDeg, elevationDeg, rangeKm, altitudeKm, speedKmS, shadowFraction].every(Number.isFinite)) return null;
+  return { azimuthDeg, elevationDeg, rangeKm, altitudeKm, speedKmS, shadowFraction };
 }
 
 function observerSky(timestamp: number, sequence: number, observer: { lat: number; lon: number; altitudeKm: number }, minElevationDeg = 0, maxResults = 64): void {
@@ -315,12 +325,12 @@ function predictPasses(satelliteId: string, startTimestamp: number, sequence: nu
   const threshold = Math.max(0, Math.min(30, minElevationDeg));
   const stepMs = 30_000;
   const end = startTimestamp + hours * 60 * 60_000;
-  const passes: Array<{ startTime: number; endTime: number; maxTime: number; maxElevationDeg: number; riseAzimuthDeg: number; maxAzimuthDeg: number; setAzimuthDeg: number }> = [];
+  const passes: Array<{ startTime: number; endTime: number; maxTime: number; maxElevationDeg: number; riseAzimuthDeg: number; maxAzimuthDeg: number; setAzimuthDeg: number; maxShadowFraction: number }> = [];
   let previousTime = startTimestamp;
   let previous = lookAnglesFor(record, previousTime, observer);
   let above = (previous?.elevationDeg ?? -90) >= threshold;
-  let currentPass: null | { startTime: number; riseAzimuthDeg: number; maxTime: number; maxElevationDeg: number; maxAzimuthDeg: number } = above && previous
-    ? { startTime: startTimestamp, riseAzimuthDeg: previous.azimuthDeg, maxTime: startTimestamp, maxElevationDeg: previous.elevationDeg, maxAzimuthDeg: previous.azimuthDeg }
+  let currentPass: null | { startTime: number; riseAzimuthDeg: number; maxTime: number; maxElevationDeg: number; maxAzimuthDeg: number; maxShadowFraction: number } = above && previous
+    ? { startTime: startTimestamp, riseAzimuthDeg: previous.azimuthDeg, maxTime: startTimestamp, maxElevationDeg: previous.elevationDeg, maxAzimuthDeg: previous.azimuthDeg, maxShadowFraction: previous.shadowFraction }
     : null;
 
   for (let time = startTimestamp + stepMs; time <= end && passes.length < 8; time += stepMs) {
@@ -328,10 +338,13 @@ function predictPasses(satelliteId: string, startTimestamp: number, sequence: nu
     const isAbove = (look?.elevationDeg ?? -90) >= threshold;
     if (!above && isAbove && look) {
       const rise = refineElevationCrossing(record, observer, previousTime, time, threshold);
-      currentPass = { startTime: rise.time, riseAzimuthDeg: rise.azimuthDeg, maxTime: time, maxElevationDeg: look.elevationDeg, maxAzimuthDeg: look.azimuthDeg };
+      currentPass = { startTime: rise.time, riseAzimuthDeg: rise.azimuthDeg, maxTime: time, maxElevationDeg: look.elevationDeg, maxAzimuthDeg: look.azimuthDeg, maxShadowFraction: look.shadowFraction };
     }
     if (isAbove && look && currentPass && look.elevationDeg > currentPass.maxElevationDeg) {
-      currentPass.maxTime = time; currentPass.maxElevationDeg = look.elevationDeg; currentPass.maxAzimuthDeg = look.azimuthDeg;
+      currentPass.maxTime = time;
+      currentPass.maxElevationDeg = look.elevationDeg;
+      currentPass.maxAzimuthDeg = look.azimuthDeg;
+      currentPass.maxShadowFraction = look.shadowFraction;
     }
     if (above && !isAbove && currentPass) {
       const set = refineElevationCrossing(record, observer, previousTime, time, threshold);
