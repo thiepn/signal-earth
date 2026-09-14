@@ -60,5 +60,5 @@ Turn the Phase 13 cinematic-tour framework into a current-data briefing system w
 - [x] Release verification passes with **15** safe service-worker precache entries.
 - [x] Functional Phase 23 production package: approximately **13.92 MB**.
 - [x] Exact v1.8.0 branch-head certification passes.
-- [ ] GitHub Pages production deployment succeeds.
+- [x] GitHub Pages production deployment succeeds.
 - [ ] Real-device visual smoke test remains a separate manual acceptance step.
