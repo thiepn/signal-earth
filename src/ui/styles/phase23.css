@@ -108,7 +108,10 @@
   to { transform: rotate(360deg); }
 }
 
-.se-reduced-motion .briefing-live-status.is-refreshing > span,
+.se-reduced-motion .briefing-live-status.is-refreshing > span {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .briefing-live-status.is-refreshing > span { animation: none; }
 }
