@@ -35,11 +35,13 @@ Turn selected Signal Earth data into understandable, source-grounded context wit
 
 ## Verification
 
-- [ ] TypeScript passes.
-- [ ] Signal Intelligence unit tests pass.
-- [ ] Full unit-test suite passes.
-- [ ] Production Vite build passes.
-- [ ] Release verification passes with a safe service-worker precache.
-- [ ] Clean branch certification passes.
+- [x] TypeScript passes.
+- [x] **9/9** Signal Intelligence unit tests pass.
+- [x] **32/32** unit-test files pass.
+- [x] **110/110** total unit tests pass.
+- [x] Production Vite build passes.
+- [x] Release verification passes with **15** safe service-worker precache entries.
+- [x] Certified branch production package: approximately **13.61 MB**.
+- [x] Clean branch certification passes.
 - [ ] GitHub Pages production deployment succeeds.
 - [ ] Real-device visual smoke test remains a separate manual acceptance step.
