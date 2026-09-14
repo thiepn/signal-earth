@@ -55,6 +55,18 @@ export function OrbitControls(props: OrbitControlsProps) {
         </div>
       </div>
 
+      <div className="orbit2-guide" aria-label="Orbit 2.0 guide">
+        <div className="orbit2-guide__head"><span className="panel-eyebrow">ORBIT 2.0</span><strong>Selected object mechanics</strong></div>
+        <div className="orbit2-guide__classes" aria-label="Orbit classes">
+          <span>LEO</span><span>MEO</span><span>GEO</span><span>HEO</span>
+        </div>
+        <div className="orbit2-guide__track">
+          <span><b>ASC</b> solid ground track</span>
+          <span><b>DESC</b> dashed ground track</span>
+        </div>
+        <p>Select a satellite for perigee/apogee, mean orbital phase, constellation context, current sunlight state, and ascending/descending motion. Marker caps use stratified catalog sampling so large catalogs are not biased toward the first loaded records.</p>
+      </div>
+
       {!temporalAvailable && <p className="layer-inline-warning">Current OMM elements are not presented as certified historical orbit positions beyond ±24 hours. Return closer to LIVE to render satellites.</p>}
       {props.partial && <p className="layer-inline-warning">Some CelesTrak groups were unavailable. Showing the groups that loaded successfully.</p>}
       {props.error && <p className="layer-inline-warning">{props.error}</p>}
