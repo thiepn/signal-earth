@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import type { Freshness } from '../../core/data/freshness';
 import { IntelligenceCard } from '../../features/intelligence/IntelligenceCard';
 import { buildEarthquakeIntelligence, buildNaturalEventIntelligence, buildSatelliteIntelligence } from '../../features/intelligence/derive';
 import { visualAltitudeFactor, type OrbitCameraMode, type OrbitScaleMode } from '../../features/orbit/interaction';
+import { compactAltitude, compactOrbitDuration, deriveOrbitMechanics, formatIllumination, formatOrbitClass } from '../../features/orbit/mechanics';
 import { trailLabel, type OrbitTrailMode } from '../../features/orbit/playback';
 import type { SatelliteRecord, SatelliteTelemetry } from '../../features/orbit/types';
 import type { EarthquakeRecord } from '../../features/seismic/types';
@@ -57,6 +59,11 @@ function freshnessLabel(value?: Freshness): string {
 
 export function InspectorPanel(props: InspectorPanelProps) {
   const { entity, earthquake, earthquakeFreshness, naturalEvent, naturalEventFreshness, simulationTime, satellite, satelliteTelemetry, orbitFreshness, compact = false } = props;
+  const orbitMechanics = useMemo(
+    () => satellite && satelliteTelemetry ? deriveOrbitMechanics(satellite, satelliteTelemetry.timestamp) : null,
+    [satellite, satelliteTelemetry?.timestamp],
+  );
+
   if (!entity) {
     return (
       <div className={compact ? 'empty-inspector' : 'inspector-panel panel-surface'}>
@@ -118,15 +125,26 @@ export function InspectorPanel(props: InspectorPanelProps) {
       </>}
 
       {isSatellite && <>
-        <p className="quake-place">NORAD {satellite.noradId} · {satellite.category.replace('-', ' ').toUpperCase()}</p>
-        <dl className="detail-grid detail-grid--quake">
+        <p className="quake-place">NORAD {satellite.noradId} · {orbitMechanics ? formatOrbitClass(orbitMechanics.orbitClass).toUpperCase() : satellite.category.replace('-', ' ').toUpperCase()}{orbitMechanics?.constellation ? ` · ${orbitMechanics.constellation.toUpperCase()}` : ''}</p>
+        <dl className="detail-grid detail-grid--quake orbit-detail-grid">
           <div><dt>Altitude</dt><dd>{satelliteTelemetry ? `${satelliteTelemetry.altitudeKm.toLocaleString(undefined, { maximumFractionDigits: 0 })} km` : 'Propagating…'}</dd></div>
           <div><dt>Velocity</dt><dd>{satelliteTelemetry ? `${satelliteTelemetry.speedKmS.toFixed(2)} km/s` : '—'}</dd></div>
           <div><dt>Latitude</dt><dd>{satelliteTelemetry ? formatCoordinate(satelliteTelemetry.lat, 'N', 'S') : '—'}</dd></div>
           <div><dt>Longitude</dt><dd>{satelliteTelemetry ? formatCoordinate(satelliteTelemetry.lon, 'E', 'W') : '—'}</dd></div>
+          <div><dt>Sunlight</dt><dd>{orbitMechanics ? formatIllumination(orbitMechanics.illumination).toUpperCase() : '—'}</dd></div>
+          <div><dt>Ground-track leg</dt><dd>{orbitMechanics ? orbitMechanics.direction.toUpperCase() : '—'}</dd></div>
+          <div><dt>Perigee</dt><dd>{orbitMechanics ? compactAltitude(orbitMechanics.perigeeAltitudeKm) : '—'}</dd></div>
+          <div><dt>Apogee</dt><dd>{orbitMechanics ? compactAltitude(orbitMechanics.apogeeAltitudeKm) : '—'}</dd></div>
+          <div><dt>Orbital period</dt><dd>{orbitMechanics ? compactOrbitDuration(orbitMechanics.periodMinutes) : '—'}</dd></div>
+          <div><dt>Mean phase</dt><dd>{orbitMechanics?.meanPhaseDeg === null || orbitMechanics?.meanPhaseDeg === undefined ? '—' : `${orbitMechanics.meanPhaseDeg.toFixed(1)}°`}</dd></div>
           <div><dt>Element epoch</dt><dd>{new Date(satellite.epoch).toLocaleDateString()}</dd></div>
           <div><dt>Display scale</dt><dd>{props.orbitScaleMode === 'true' ? 'TRUE' : `VISUAL ×${visualFactor.toFixed(2)}`}</dd></div>
         </dl>
+        {orbitMechanics && <div className="orbit-state-strip" aria-label="Orbit 2.0 state">
+          <span><b>{orbitMechanics.orbitClass.toUpperCase()}</b>{orbitMechanics.constellation ?? 'Independent / other'}</span>
+          <span><b>{orbitMechanics.direction === 'ascending' ? 'ASC' : orbitMechanics.direction === 'descending' ? 'DESC' : 'TURN'}</b>{orbitMechanics.direction === 'turning' ? 'Near latitude extremum' : `${orbitMechanics.direction} ground track`}</span>
+          <span><b>{orbitMechanics.illumination === 'sunlit' ? 'SUN' : orbitMechanics.illumination === 'umbra' ? 'UMBRA' : orbitMechanics.illumination === 'penumbra' ? 'PEN' : '—'}</b>{formatIllumination(orbitMechanics.illumination)}</span>
+        </div>}
         {satelliteIntelligence && <IntelligenceCard intelligence={satelliteIntelligence} context={nearbyCity ? `Current propagated ground point ${nearbyCity.label.toLowerCase()}.` : 'Current propagated ground point is remote from the bundled city reference set.'} compact={compact} />}
         <div className="quake-meta-line"><span>PROPAGATED</span><span>{satellite.categories.map((category) => category.replace('-', ' ')).join(' · ')}</span></div>
 
