@@ -6,11 +6,11 @@ Signal Earth is a static, browser-first observatory for Earth events, near-Earth
 
 ## Current status
 
-**Signal Earth v1.6.0 — Phase 21 Above Me 2.0** is production-built and release-certified for GitHub Pages.
+**Signal Earth v1.7.0 — Phase 22 Orbit 2.0** is production-built and release-certified for GitHub Pages.
 
 Live deployment: **https://thiepn.dev/signal-earth/**
 
-The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Above Me 2.0 observer tools, shareable public views, PNG capture, optional 10-second recording, PWA/offline-shell support, Time 2.0 historical replay, Observatory UX 2.0, and deterministic Signal Intelligence.
+The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Orbit 2.0, Above Me 2.0 observer tools, shareable public views, PNG capture, optional 10-second recording, PWA/offline-shell support, Time 2.0 historical replay, Observatory UX 2.0, and deterministic Signal Intelligence.
 
 Time 2.0 exposes **24H / 7D / 30D** historical ranges while keeping future simulation capped at +24H. A guided **24H REPLAY** runs the previous day at 1000× and reconnects automatically to LIVE. Deep historical replay prioritizes observed Earth data; current CelesTrak OMM propagation is deliberately suppressed outside its certified ±24-hour window.
 
@@ -20,6 +20,8 @@ Signal Intelligence adds a deterministic explanation layer beside raw provider f
 
 Above Me 2.0 makes observer context first-class. It ranks ISS passes using local darkness, maximum elevation and satellite sunlight at culmination, surfaces rise/culmination/set geometry, improves Sun/Moon horizon context, summarizes current optical conditions, and keeps NOAA aurora context tied to model validity. Favorable pass geometry is explicitly not presented as guaranteed naked-eye visibility, and current weather is never projected into future passes.
 
+Orbit 2.0 deepens selected-satellite exploration with mean-element perigee/apogee, orbital period and mean phase, LEO/MEO/GEO/HEO classification, deterministic constellation/program context, selected-time sunlight/shadow state, ascending/descending ground-track semantics, richer hover context, and stratified marker sampling for large catalogs.
+
 Automated release certification runs TypeScript validation, unit tests, the production Vite build, service-worker precache generation, and post-build release verification before Pages deployment. Real interactive browser/device acceptance remains a separate manual check.
 
 ## Current interaction model
@@ -27,10 +29,11 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 ### Desktop
 
 - top bar: primary **Now** and **Search** actions, compact time state, then secondary Brief / Here / Display tools
-- left: five primary layers, with only the selected layer’s detailed controls expanded; Space Weather includes a deterministic activity interpretation card
-- right: selected-object inspector appears only when an object is selected and separates raw source data from derived intelligence
+- left: five primary layers, with only the selected layer’s detailed controls expanded; Orbit explains LEO/MEO/GEO/HEO classes and ASC/DESC ground-track semantics
+- right: selected-object inspector appears only when an object is selected and separates raw source data from derived intelligence; selected satellites expose Orbit 2.0 mechanics and sunlight state
 - bottom: Time 2.0 timeline with 24H / 7D / 30D replay ranges and a +24H future cap
 - globe: zoom-aware country/city context and country borders; hover signals for a compact preview, click to inspect, or click Earth to create a surface target
+- orbit: selected orbit path plus solid ascending and dashed descending ground-track segments, Follow/Orbit View cameras, and temporal trails
 - Above Me: local observer summary, horizon sky, ranked ISS passes, current observing conditions and aurora context
 
 ### Timeline
@@ -50,6 +53,7 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 - persistent bottom dock for **Now / Layers / Here / Time / Inspect**
 - one bottom sheet at a time; selecting a globe signal opens Inspect automatically
 - intelligence cards use the same source/derived distinction as desktop
+- selected satellites expose the same Orbit 2.0 mechanics as desktop in compact form
 - the Time sheet exposes the same timeline state and controls as desktop
 - Above Me 2.0 is available from the Here dock; location permission is requested only after explicit opt-in
 
@@ -75,6 +79,11 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 - provider flags remain flags: for example, the USGS tsunami field is never rewritten as a claim that a tsunami occurred
 - NASA EONET movement calculations use only geometry reports applicable at the selected simulation time
 - CelesTrak orbital period, inclination and eccentricity are derived from OMM fields; displayed spacecraft positions remain locally propagated rather than measured live positions
+- Orbit 2.0 selected mechanics are derived locally from loaded CelesTrak OMM fields plus selected-time satellite.js propagation; no additional orbit provider is introduced
+- Orbit 2.0 perigee/apogee and mean phase are mean-element context, not precision orbit determination
+- selected satellite sunlight/penumbra/umbra state is derived from the selected-time propagated ECI position and Earth-shadow geometry
+- quality-capped orbit rendering uses stratified catalog sampling and always preserves the selected satellite when possible
+- selected ground-track direction is rendered as solid ascending and dashed descending segments; this is motion direction only and does not represent sensor swath or communications footprint
 - current-only NOAA scales and solar-wind observations are never backfilled into unrelated replay/future time
 - renderer state stays behind `GlobeViewportHandle`
 - one ActionBus for application-state actions
@@ -157,6 +166,7 @@ The local Earth textures are stylized derivatives of public-domain Natural Earth
 - [`docs/PHASE-19-ACCEPTANCE.md`](docs/PHASE-19-ACCEPTANCE.md)
 - [`docs/PHASE-20-ACCEPTANCE.md`](docs/PHASE-20-ACCEPTANCE.md)
 - [`docs/PHASE-21-ACCEPTANCE.md`](docs/PHASE-21-ACCEPTANCE.md)
+- [`docs/PHASE-22-ACCEPTANCE.md`](docs/PHASE-22-ACCEPTANCE.md)
 - [`docs/RELEASE-V1.md`](docs/RELEASE-V1.md)
 
 ## Living Earth — v1.2
@@ -169,4 +179,8 @@ Selected earthquakes, natural events and satellites include deterministic intell
 
 ## Above Me 2.0 — v1.6
 
-The local observatory now ranks ISS opportunities over the next 24 hours, shows rise/culmination/set geometry, evaluates sunlight vs Earth shadow at pass culmination, improves Sun/Moon horizon context, and summarizes current darkness/cloud conditions and aurora model context. Viewing labels describe geometry only; apparent brightness, local obstructions and future cloud cover remain outside the model.
+The local observatory ranks ISS opportunities over the next 24 hours, shows rise/culmination/set geometry, evaluates sunlight vs Earth shadow at pass culmination, improves Sun/Moon horizon context, and summarizes current darkness/cloud conditions and aurora model context. Viewing labels describe geometry only; apparent brightness, local obstructions and future cloud cover remain outside the model.
+
+## Orbit 2.0 — v1.7
+
+Selected satellites now expose local OMM-derived orbital mechanics including period, perigee/apogee, mean phase, orbit class, constellation/program context, selected-time sunlight state and ascending/descending motion. The selected ground track separates solid ascending from dashed descending segments, while large quality-capped catalogs use stratified sampling rather than first-record truncation. All positions remain locally propagated CelesTrak OMM context within Signal Earth’s existing certified ±24-hour orbit window.
