@@ -42,6 +42,17 @@ function shortestLongitudeLerp(a: number, b: number, t: number): number {
   return normalizeLongitude(a + delta * t);
 }
 
+function stratifiedIndices(candidates: number[], cap: number): number[] {
+  if (candidates.length <= cap) return candidates;
+  const result: number[] = [];
+  const stride = candidates.length / cap;
+  for (let slot = 0; slot < cap; slot += 1) {
+    const index = Math.min(candidates.length - 1, Math.floor(slot * stride));
+    result.push(candidates[index]!);
+  }
+  return result;
+}
+
 type OrbitalState = [lat: number, lon: number, altitudeKm: number, speedKmS: number];
 
 export class OrbitRenderer implements SceneRenderer {
@@ -70,7 +81,8 @@ export class OrbitRenderer implements SceneRenderer {
   #haloGeometry: THREE.RingGeometry | null = null;
   #haloMaterial: THREE.MeshBasicMaterial | null = null;
   #orbitLine: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial> | null = null;
-  #groundLine: THREE.Line<THREE.BufferGeometry, THREE.LineDashedMaterial> | null = null;
+  #groundAscendingLine: THREE.LineSegments<THREE.BufferGeometry, THREE.LineBasicMaterial> | null = null;
+  #groundDescendingLine: THREE.LineSegments<THREE.BufferGeometry, THREE.LineDashedMaterial> | null = null;
   #trailLine: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial> | null = null;
   #renderedIndices: number[] = [];
   #slotByCatalogIndex = new Map<number, number>();
@@ -308,7 +320,7 @@ export class OrbitRenderer implements SceneRenderer {
     });
     if (candidates.length <= cap) return candidates;
     const selectedCatalogIndex = this.#selectedId === null ? -1 : this.#catalog.findIndex((satellite) => satellite.id === this.#selectedId);
-    const result = candidates.slice(0, cap);
+    const result = stratifiedIndices(candidates, cap);
     if (selectedCatalogIndex >= 0 && candidates.includes(selectedCatalogIndex) && !result.includes(selectedCatalogIndex)) result[result.length - 1] = selectedCatalogIndex;
     return result;
   }
@@ -430,27 +442,59 @@ export class OrbitRenderer implements SceneRenderer {
     return points;
   }
 
+  #groundTrackSegments(track: OrbitTrack): { ascending: THREE.Vector3[]; descending: THREE.Vector3[] } {
+    if (!this.#context) return { ascending: [], descending: [] };
+    const ascending: THREE.Vector3[] = [];
+    const descending: THREE.Vector3[] = [];
+    let previous: { lat: number; point: THREE.Vector3 } | null = null;
+    for (let index = 0; index < track.sampleCount; index += 1) {
+      const offset = index * 3;
+      const lat = track.positions[offset];
+      const lon = track.positions[offset + 1];
+      if (![lat, lon].every(Number.isFinite)) { previous = null; continue; }
+      const raw = this.#context.globe.getCoords(lat!, lon!, GROUND_TRACK_ALTITUDE);
+      const point = new THREE.Vector3(raw.x, raw.y, raw.z);
+      if (previous) {
+        const target = lat! >= previous.lat ? ascending : descending;
+        target.push(previous.point, point);
+      }
+      previous = { lat: lat!, point };
+    }
+    return { ascending, descending };
+  }
+
   #rebuildTrackLines(): void {
     this.#disposeTrackLines();
     if (!this.#context || !this.#track || this.#track.satelliteId !== this.#selectedId) return;
     const orbitPoints = this.#trackPoints(this.#track);
-    const groundPoints = this.#trackPoints(this.#track, true);
     if (orbitPoints.length < 2) return;
     const satellite = this.#catalog.find((item) => item.id === this.#selectedId);
     const color = satellite ? CATEGORY_COLORS[satellite.category] : '#9ee7ff';
     const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitPoints);
-    const orbitMaterial = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.58, depthWrite: false, toneMapped: false });
+    const orbitMaterial = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.62, depthWrite: false, toneMapped: false });
     this.#orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
     this.#orbitLine.name = 'signal-earth-selected-orbit-path';
     this.#orbitLine.renderOrder = 4;
     this.#context.scene.add(this.#orbitLine);
-    const groundGeometry = new THREE.BufferGeometry().setFromPoints(groundPoints);
-    const groundMaterial = new THREE.LineDashedMaterial({ color, transparent: true, opacity: 0.44, dashSize: 1.25, gapSize: 0.75, depthWrite: false, toneMapped: false });
-    this.#groundLine = new THREE.Line(groundGeometry, groundMaterial);
-    this.#groundLine.name = 'signal-earth-selected-ground-track';
-    this.#groundLine.computeLineDistances();
-    this.#groundLine.renderOrder = 5;
-    this.#context.scene.add(this.#groundLine);
+
+    const ground = this.#groundTrackSegments(this.#track);
+    if (ground.ascending.length >= 2) {
+      const geometry = new THREE.BufferGeometry().setFromPoints(ground.ascending);
+      const material = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.62, depthWrite: false, toneMapped: false });
+      this.#groundAscendingLine = new THREE.LineSegments(geometry, material);
+      this.#groundAscendingLine.name = 'signal-earth-ground-track-ascending';
+      this.#groundAscendingLine.renderOrder = 5;
+      this.#context.scene.add(this.#groundAscendingLine);
+    }
+    if (ground.descending.length >= 2) {
+      const geometry = new THREE.BufferGeometry().setFromPoints(ground.descending);
+      const material = new THREE.LineDashedMaterial({ color, transparent: true, opacity: 0.34, dashSize: 1.15, gapSize: 0.78, depthWrite: false, toneMapped: false });
+      this.#groundDescendingLine = new THREE.LineSegments(geometry, material);
+      this.#groundDescendingLine.name = 'signal-earth-ground-track-descending';
+      this.#groundDescendingLine.computeLineDistances();
+      this.#groundDescendingLine.renderOrder = 5;
+      this.#context.scene.add(this.#groundDescendingLine);
+    }
     this.#updateTrackVisibility();
   }
 
@@ -473,7 +517,8 @@ export class OrbitRenderer implements SceneRenderer {
   #updateTrackVisibility(): void {
     const matches = !!this.#track && this.#track.satelliteId === this.#selectedId;
     if (this.#orbitLine) this.#orbitLine.visible = this.#enabled && matches && this.#showOrbitPath;
-    if (this.#groundLine) this.#groundLine.visible = this.#enabled && matches && this.#showGroundTrack;
+    if (this.#groundAscendingLine) this.#groundAscendingLine.visible = this.#enabled && matches && this.#showGroundTrack;
+    if (this.#groundDescendingLine) this.#groundDescendingLine.visible = this.#enabled && matches && this.#showGroundTrack;
   }
 
   #disposeMesh(): void {
@@ -490,7 +535,8 @@ export class OrbitRenderer implements SceneRenderer {
 
   #disposeTrackLines(): void {
     if (this.#orbitLine) { this.#orbitLine.parent?.remove(this.#orbitLine); this.#orbitLine.geometry.dispose(); this.#orbitLine.material.dispose(); this.#orbitLine = null; }
-    if (this.#groundLine) { this.#groundLine.parent?.remove(this.#groundLine); this.#groundLine.geometry.dispose(); this.#groundLine.material.dispose(); this.#groundLine = null; }
+    if (this.#groundAscendingLine) { this.#groundAscendingLine.parent?.remove(this.#groundAscendingLine); this.#groundAscendingLine.geometry.dispose(); this.#groundAscendingLine.material.dispose(); this.#groundAscendingLine = null; }
+    if (this.#groundDescendingLine) { this.#groundDescendingLine.parent?.remove(this.#groundDescendingLine); this.#groundDescendingLine.geometry.dispose(); this.#groundDescendingLine.material.dispose(); this.#groundDescendingLine = null; }
   }
 
   #disposeTrailLine(): void {
