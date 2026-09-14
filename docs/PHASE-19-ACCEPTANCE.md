@@ -34,6 +34,6 @@ Turn Signal Earth from a technically capable observatory prototype into a cohere
 - [x] Production Vite build passes.
 - [x] Release verification passes with **15** safe service-worker precache entries.
 - [x] Certified branch build size: approximately **13.58 MB**.
-- [ ] Clean-branch certification after temporary Phase 19 staging machinery is removed.
-- [ ] GitHub Pages production deployment succeeds.
+- [x] Clean-branch certification passes after temporary Phase 19 staging machinery is removed.
+- [x] GitHub Pages production deployment succeeds.
 - [ ] Real-device visual smoke test remains a separate manual acceptance step.
