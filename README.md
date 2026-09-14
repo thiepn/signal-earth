@@ -6,17 +6,19 @@ Signal Earth is a static, browser-first observatory for Earth events, near-Earth
 
 ## Current status
 
-**Signal Earth v1.5.0 — Phase 20 Signal Intelligence** is production-built and release-certified for GitHub Pages.
+**Signal Earth v1.6.0 — Phase 21 Above Me 2.0** is production-built and release-certified for GitHub Pages.
 
 Live deployment: **https://thiepn.dev/signal-earth/**
 
-The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), observer-relative Above Me tools, shareable public views, PNG capture, optional 10-second recording, PWA/offline-shell support, Time 2.0 historical replay, Observatory UX 2.0, and deterministic Signal Intelligence.
+The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Above Me 2.0 observer tools, shareable public views, PNG capture, optional 10-second recording, PWA/offline-shell support, Time 2.0 historical replay, Observatory UX 2.0, and deterministic Signal Intelligence.
 
 Time 2.0 exposes **24H / 7D / 30D** historical ranges while keeping future simulation capped at +24H. A guided **24H REPLAY** runs the previous day at 1000× and reconnects automatically to LIVE. Deep historical replay prioritizes observed Earth data; current CelesTrak OMM propagation is deliberately suppressed outside its certified ±24-hour window.
 
 Observatory UX 2.0 adds contextual one-layer-at-a-time controls, zoom-aware country/city labels and country borders, hover-before-click signal previews, a selection-driven desktop inspector, and directly accessible Search on mobile. These are presentation and interaction improvements; they do not change source semantics.
 
 Signal Intelligence adds a deterministic explanation layer beside raw provider fields. It derives earthquake impact cues from USGS fields, event duration and reported movement from NASA EONET geometry, orbital mechanics from CelesTrak OMM elements, and plain-language space-weather state from NOAA SWPC products. Every intelligence card exposes its derivation method and preserves the distinction between source measurements, provider flags, propagated values, forecasts, and local calculations.
+
+Above Me 2.0 makes observer context first-class. It ranks ISS passes using local darkness, maximum elevation and satellite sunlight at culmination, surfaces rise/culmination/set geometry, improves Sun/Moon horizon context, summarizes current optical conditions, and keeps NOAA aurora context tied to model validity. Favorable pass geometry is explicitly not presented as guaranteed naked-eye visibility, and current weather is never projected into future passes.
 
 Automated release certification runs TypeScript validation, unit tests, the production Vite build, service-worker precache generation, and post-build release verification before Pages deployment. Real interactive browser/device acceptance remains a separate manual check.
 
@@ -29,6 +31,7 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 - right: selected-object inspector appears only when an object is selected and separates raw source data from derived intelligence
 - bottom: Time 2.0 timeline with 24H / 7D / 30D replay ranges and a +24H future cap
 - globe: zoom-aware country/city context and country borders; hover signals for a compact preview, click to inspect, or click Earth to create a surface target
+- Above Me: local observer summary, horizon sky, ranked ISS passes, current observing conditions and aurora context
 
 ### Timeline
 
@@ -48,7 +51,7 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 - one bottom sheet at a time; selecting a globe signal opens Inspect automatically
 - intelligence cards use the same source/derived distinction as desktop
 - the Time sheet exposes the same timeline state and controls as desktop
-- Above Me is available from the Here dock; location permission is requested only after explicit opt-in
+- Above Me 2.0 is available from the Here dock; location permission is requested only after explicit opt-in
 
 ### Keyboard
 
@@ -96,7 +99,9 @@ Automated release certification runs TypeScript validation, unit tests, the prod
 - OVATION aurora is validity-window constrained and rendered through a dedicated quality-bounded Three.js point field
 - observer location is ephemeral by default and only persisted after explicit opt-in
 - observer-relative satellite look angles and pass predictions remain inside the orbit worker
-- current Open-Meteo conditions use a 15-minute cache and are never backfilled into unrelated replay/future time
+- ISS pass culmination uses satellite.js solar position + Earth-shadow fraction to distinguish sunlit / penumbra / umbra geometry
+- favorable observer geometry combines local solar darkness, satellite illumination and pass elevation but never claims guaranteed apparent visibility
+- current Open-Meteo conditions use a 15-minute cache and are never backfilled into unrelated replay/future time or projected into future pass weather
 - local Sun/Moon/horizon geometry follows the same central TimeEngine
 - Phase 12 search is local-first and indexes only simulation-time-applicable observed events
 - command parsing is deterministic and compiles to existing app actions; no AI or remote geocoder is used
@@ -151,6 +156,7 @@ The local Earth textures are stylized derivatives of public-domain Natural Earth
 - [`docs/PHASE-18-ACCEPTANCE.md`](docs/PHASE-18-ACCEPTANCE.md)
 - [`docs/PHASE-19-ACCEPTANCE.md`](docs/PHASE-19-ACCEPTANCE.md)
 - [`docs/PHASE-20-ACCEPTANCE.md`](docs/PHASE-20-ACCEPTANCE.md)
+- [`docs/PHASE-21-ACCEPTANCE.md`](docs/PHASE-21-ACCEPTANCE.md)
 - [`docs/RELEASE-V1.md`](docs/RELEASE-V1.md)
 
 ## Living Earth — v1.2
@@ -159,4 +165,8 @@ Signal Earth includes a first-class Weather layer with NASA EOSDIS/GIBS VIIRS cl
 
 ## Signal Intelligence — v1.5
 
-Selected earthquakes, natural events and satellites now include deterministic intelligence cards that explain the most relevant source-derived context while retaining the raw provider fields above them. The Aurora/Space Weather layer receives the same treatment for NOAA Kp, G/R/S scales, solar wind and OVATION validity. Derived text is explicitly labelled and includes its methodology; no AI-generated event claims are introduced.
+Selected earthquakes, natural events and satellites include deterministic intelligence cards that explain the most relevant source-derived context while retaining the raw provider fields above them. The Aurora/Space Weather layer receives the same treatment for NOAA Kp, G/R/S scales, solar wind and OVATION validity. Derived text is explicitly labelled and includes its methodology; no AI-generated event claims are introduced.
+
+## Above Me 2.0 — v1.6
+
+The local observatory now ranks ISS opportunities over the next 24 hours, shows rise/culmination/set geometry, evaluates sunlight vs Earth shadow at pass culmination, improves Sun/Moon horizon context, and summarizes current darkness/cloud conditions and aurora model context. Viewing labels describe geometry only; apparent brightness, local obstructions and future cloud cover remain outside the model.
