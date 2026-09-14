@@ -2,6 +2,7 @@ import { forwardRef, useCallback, useRef, type ComponentPropsWithoutRef, type Fo
 import type { EarthquakeRecord } from '../seismic/types';
 import type { NaturalEventRecord } from '../natural-events/types';
 import type { SatelliteRecord, SatelliteTelemetry } from '../orbit/types';
+import { deriveOrbitMechanics, formatIllumination } from '../orbit/mechanics';
 import { hideSignalHoverPreview, showSignalHoverPreview } from '../../ui/hoverPreviewDom';
 import { GlobeViewport as BaseGlobeViewport, type GlobeViewportHandle, type GlobeViewportQuality } from './GlobeViewportBase';
 import type { GeoContextLabel } from './geoContext';
@@ -50,15 +51,22 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
 
   const onSatelliteHover = useCallback((satellite: SatelliteRecord | null, telemetry: SatelliteTelemetry | null, position?: { x: number; y: number }) => {
     props.onSatelliteHover?.(satellite, telemetry, position);
-    showSignalHoverPreview(satellite && telemetry && position ? {
-      kind: satellite.category.replace('-', ' ').toUpperCase(),
+    if (!satellite || !telemetry || !position) {
+      showSignalHoverPreview(null);
+      return;
+    }
+    const mechanics = deriveOrbitMechanics(satellite, telemetry.timestamp);
+    const orbitClass = mechanics.orbitClass.toUpperCase();
+    const direction = mechanics.direction === 'ascending' ? 'ASC' : mechanics.direction === 'descending' ? 'DESC' : 'TURN';
+    showSignalHoverPreview({
+      kind: `${orbitClass} · ${direction}`,
       title: satellite.name,
       metric: `${telemetry.altitudeKm.toFixed(0)} km`,
-      detail: `${telemetry.speedKmS.toFixed(2)} km/s · NORAD ${satellite.noradId}`,
-      source: 'CELESTRAK · PROPAGATED',
+      detail: `${formatIllumination(mechanics.illumination)} · ${telemetry.speedKmS.toFixed(2)} km/s${mechanics.constellation ? ` · ${mechanics.constellation}` : ''}`,
+      source: `CELESTRAK · NORAD ${satellite.noradId}`,
       x: position.x,
       y: position.y,
-    } : null);
+    });
   }, [props.onSatelliteHover]);
 
   const onGeoContextNavigate = useCallback((label: GeoContextLabel) => {
