@@ -4,7 +4,18 @@ import type { NaturalEventCategory } from '../natural-events/types';
 import type { EarthquakeTimeWindow } from '../seismic/types';
 import type { SatelliteCategory } from '../../shared/types/orbit';
 
-export type BriefingId = 'earth-now' | 'orbit-now' | 'planet-motion' | 'night-earth';
+export type BriefingId =
+  | 'earth-now'
+  | 'seismic-now'
+  | 'storm-watch'
+  | 'space-weather-now'
+  | 'above-me'
+  | 'orbit-now'
+  | 'last-24h'
+  | 'planet-motion'
+  | 'night-earth';
+
+export type BriefingDataState = 'live' | 'cached' | 'partial' | 'fallback' | 'unavailable' | 'static';
 
 export type BriefingInstruction =
   | { type: 'frame-earth'; lat?: number; lng?: number; altitude?: number; durationMs?: number }
@@ -41,6 +52,17 @@ export interface BriefingDefinition {
   description: string;
   estimatedSeconds: number;
   steps: BriefingStep[];
+  /** Phase 23 metadata. Static Phase 13 tours omit this or set it to false. */
+  dataDriven?: boolean;
+  /** Describes the provider snapshot used to compose this definition. */
+  dataState?: BriefingDataState;
+  /** Short source-grounded line rendered in the launcher card. */
+  dataSummary?: string;
+  /** Wall-clock time at which the dynamic definition was composed. */
+  generatedAt?: number;
+  /** False when a briefing cannot be made meaningful without an explicit prerequisite. */
+  available?: boolean;
+  unavailableReason?: string;
 }
 
 export type TourStatus = 'idle' | 'running' | 'completed' | 'cancelled' | 'failed';
