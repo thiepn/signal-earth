@@ -24,6 +24,27 @@ const sw = await readFile(path.join(dist, 'sw.js'), 'utf8');
 if (sw.includes('__SIGNAL_EARTH_PRECACHE__')) throw new Error('Production service worker still contains the precache placeholder.');
 if (!sw.includes('./index.html')) throw new Error('Production service worker does not precache the application shell.');
 
+const precacheMatch = sw.match(/const GENERATED_PRECACHE = (\[[^;]*\]);/);
+if (!precacheMatch) throw new Error('Production service worker does not expose a generated precache list.');
+const precache = JSON.parse(precacheMatch[1]);
+if (!Array.isArray(precache) || precache.length === 0) throw new Error('Production service-worker precache is empty.');
+
+for (const entry of precache) {
+  if (typeof entry !== 'string' || !entry.startsWith('./')) throw new Error(`Invalid precache entry: ${String(entry)}`);
+  const relative = entry.slice(2);
+  const segments = relative.split('/');
+  if (segments.some((segment) => segment.startsWith('.'))) throw new Error(`Hidden file must not be precached: ${entry}`);
+  if (/\.map$/i.test(relative) || /\.md$/i.test(relative) || relative === 'sw.js') throw new Error(`Non-runtime file must not be precached: ${entry}`);
+  await access(path.join(dist, relative));
+}
+
+for (const requiredEntry of ['./index.html', './manifest.webmanifest']) {
+  if (!precache.includes(requiredEntry)) throw new Error(`Required application-shell asset missing from precache: ${requiredEntry}`);
+}
+if (!precache.some((entry) => /^\.\/assets\/.*\.js$/.test(entry))) throw new Error('Production JavaScript bundle missing from precache.');
+if (!precache.some((entry) => /^\.\/assets\/.*\.css$/.test(entry))) throw new Error('Production stylesheet bundle missing from precache.');
+if (!precache.some((entry) => /^\.\/assets\/.*worker.*\.js$/.test(entry))) throw new Error('Production orbit worker missing from precache.');
+
 const manifest = JSON.parse(await readFile(path.join(dist, 'manifest.webmanifest'), 'utf8'));
 if (manifest.name !== 'Signal Earth' || manifest.display !== 'standalone') throw new Error('Unexpected PWA manifest metadata.');
 if (!Array.isArray(manifest.icons) || manifest.icons.length < 2) throw new Error('PWA icon set is incomplete.');
@@ -41,4 +62,4 @@ async function directorySize(directory) {
 const bytes = await directorySize(dist);
 const budget = 25 * 1024 * 1024;
 if (bytes > budget) throw new Error(`Production site is ${(bytes / 1024 / 1024).toFixed(1)} MB; V1 budget is 25 MB.`);
-console.log(`Release verification passed: ${(bytes / 1024 / 1024).toFixed(2)} MB production site.`);
+console.log(`Release verification passed: ${(bytes / 1024 / 1024).toFixed(2)} MB production site with ${precache.length} safe precache entries.`);
