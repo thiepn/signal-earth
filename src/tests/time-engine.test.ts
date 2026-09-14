@@ -31,7 +31,7 @@ describe('TimeEngine', () => {
     expect(engine.currentTime).toBe(30_000);
   });
 
-  it('re-enters wall time only through returnLive', () => {
+  it('re-enters wall time only through returnLive for free playback', () => {
     let now = 10_000;
     const engine = new TimeEngine({ now: () => now });
     engine.pause();
@@ -54,16 +54,27 @@ describe('TimeEngine', () => {
     engine.setTime(110_000);
     expect(engine.snapshot().mode).toBe('simulation');
   });
-  it('clamps manual seeks to the supported global timeline window', () => {
-    let now = 100_000_000;
+
+  it('uses the Time 2.0 asymmetric 30-day replay / 24-hour future bounds', () => {
+    let now = 4_000_000_000;
     const hour = 3_600_000;
     const engine = new TimeEngine({ now: () => now });
 
-    engine.seekOffset(-30 * hour);
-    expect(engine.snapshot().simulationTime).toBe(now - 24 * hour);
+    engine.seekOffset(-40 * 24 * hour);
+    expect(engine.snapshot().simulationTime).toBe(now - 30 * 24 * hour);
 
     engine.seekOffset(30 * hour);
     expect(engine.snapshot().simulationTime).toBe(now + 24 * hour);
+  });
+
+  it('retains the symmetric window override for explicit callers', () => {
+    let now = 100_000_000;
+    const hour = 3_600_000;
+    const engine = new TimeEngine({ now: () => now, windowMs: 6 * hour });
+    engine.seekOffset(-20 * hour);
+    expect(engine.snapshot().simulationTime).toBe(now - 6 * hour);
+    engine.seekOffset(20 * hour);
+    expect(engine.snapshot().simulationTime).toBe(now + 6 * hour);
   });
 
   it('stops accelerated playback at the +24h boundary', () => {
@@ -80,6 +91,23 @@ describe('TimeEngine', () => {
     expect(snapshot.speed).toBe(0);
   });
 
+  it('can replay historical time directly back to LIVE without overshooting into future simulation', () => {
+    let now = 4_000_000_000;
+    const hour = 3_600_000;
+    const engine = new TimeEngine({ now: () => now });
+    engine.startReplayToLive(now - 24 * hour, 1000);
+    expect(engine.replayToLiveActive).toBe(true);
+    expect(engine.snapshot().mode).toBe('replay');
+
+    now += 87_000;
+    const snapshot = engine.snapshot();
+    expect(snapshot.mode).toBe('live');
+    expect(snapshot.simulationTime).toBe(now);
+    expect(snapshot.speed).toBe(1);
+    expect(snapshot.isPlaying).toBe(true);
+    expect(engine.replayToLiveActive).toBe(false);
+  });
+
   it('reclassifies a paused timestamp as replay once wall time passes it', () => {
     let now = 10_000;
     const engine = new TimeEngine({ now: () => now });
@@ -87,5 +115,4 @@ describe('TimeEngine', () => {
     now = 11_000;
     expect(engine.snapshot().mode).toBe('replay');
   });
-
 });

@@ -5,6 +5,7 @@ import { ORBIT_CATEGORIES, ORBIT_CATEGORY_LABELS } from './types';
 
 interface OrbitControlsProps {
   enabled: boolean;
+  temporalAvailable?: boolean;
   activeCategories: Record<SatelliteCategory, boolean>;
   categoryCounts: Record<SatelliteCategory, number>;
   totalCount: number;
@@ -27,12 +28,13 @@ function freshnessLabel(value?: Freshness): string {
 
 export function OrbitControls(props: OrbitControlsProps) {
   if (!props.enabled) return null;
+  const temporalAvailable = props.temporalAvailable ?? true;
   return (
     <section className="orbit-controls" aria-label="Orbit layer controls">
       <div className="quake-control-header">
         <div>
           <span className="panel-eyebrow">CELESTRAK · OMM</span>
-          <strong>{props.validCount.toLocaleString()} active · {props.totalCount.toLocaleString()} catalog</strong>
+          <strong>{temporalAvailable ? `${props.validCount.toLocaleString()} active · ${props.totalCount.toLocaleString()} catalog` : 'Outside certified replay window'}</strong>
         </div>
         <span className={`freshness-chip freshness-chip--${props.freshness ?? 'unavailable'}`}>{props.loading ? 'LOADING' : freshnessLabel(props.freshness)}</span>
       </div>
@@ -53,6 +55,7 @@ export function OrbitControls(props: OrbitControlsProps) {
         </div>
       </div>
 
+      {!temporalAvailable && <p className="layer-inline-warning">Current OMM elements are not presented as certified historical orbit positions beyond ±24 hours. Return closer to LIVE to render satellites.</p>}
       {props.partial && <p className="layer-inline-warning">Some CelesTrak groups were unavailable. Showing the groups that loaded successfully.</p>}
       {props.error && <p className="layer-inline-warning">{props.error}</p>}
       {props.sourceUpdatedAt && <div className="orbit-source-age">Newest element epoch · {new Date(props.sourceUpdatedAt).toLocaleString()}</div>}
