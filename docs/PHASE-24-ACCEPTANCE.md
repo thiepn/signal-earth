@@ -52,5 +52,5 @@ Make Signal Earth remember how the observatory is used without adding accounts, 
 - [x] Release verification passes with **15** safe service-worker precache entries.
 - [x] Certified v1.9.0 production package: approximately **13.95 MB**.
 - [x] Exact v1.9.0 branch-head certification passes.
-- [ ] GitHub Pages production deployment succeeds.
+- [x] GitHub Pages production deployment succeeds.
 - [ ] Real-device visual smoke test remains a separate manual acceptance step.
