@@ -7,6 +7,7 @@ import './ui/styles/phase19.css';
 import './ui/styles/intelligence.css';
 import './ui/styles/orbit2.css';
 import './ui/styles/phase23.css';
+import './ui/styles/phase24.css';
 import { registerSignalEarthServiceWorker } from './core/release/serviceWorker';
 
 const root = document.getElementById('root');
