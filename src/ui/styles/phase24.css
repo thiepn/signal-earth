@@ -1,0 +1,217 @@
+.settings-section--saved-worlds {
+  overflow: visible;
+}
+
+.saved-worlds {
+  display: grid;
+  gap: 10px;
+}
+
+.saved-worlds__capture {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.saved-worlds__capture label {
+  display: grid;
+  gap: 5px;
+}
+
+.saved-worlds__capture label > span {
+  color: var(--se-dim);
+  font: 700 .48rem/1 var(--se-mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.saved-worlds__capture input {
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--se-line);
+  border-radius: 7px;
+  outline: none;
+  background: rgba(8, 14, 20, .72);
+  color: var(--se-text);
+  font: 600 .68rem/1 var(--se-ui);
+}
+
+.saved-worlds__capture input:focus-visible {
+  border-color: rgba(158, 231, 255, .55);
+  box-shadow: 0 0 0 2px rgba(158, 231, 255, .09);
+}
+
+.saved-worlds__capture .primary-button {
+  min-height: 34px;
+  white-space: nowrap;
+}
+
+.saved-worlds__capacity {
+  display: flex;
+  justify-content: space-between;
+  color: var(--se-dim);
+  font: 650 .45rem/1 var(--se-mono);
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+
+.saved-worlds__status {
+  margin: 0;
+  padding: 7px 8px;
+  border-left: 2px solid rgba(98, 240, 178, .48);
+  background: rgba(98, 240, 178, .035);
+  color: var(--se-text-soft);
+  font-size: .56rem;
+  line-height: 1.45;
+}
+
+.saved-worlds__empty {
+  display: grid;
+  gap: 4px;
+  padding: 11px;
+  border: 1px dashed var(--se-line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .012);
+}
+
+.saved-worlds__empty strong {
+  color: var(--se-text-soft);
+  font-size: .64rem;
+}
+
+.saved-worlds__empty span {
+  color: var(--se-dim);
+  font-size: .55rem;
+  line-height: 1.45;
+}
+
+.saved-worlds__list {
+  display: grid;
+  gap: 7px;
+  max-height: 340px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+}
+
+.saved-world-card {
+  border: 1px solid var(--se-line);
+  border-radius: 8px;
+  background: rgba(5, 10, 16, .55);
+  overflow: hidden;
+}
+
+.saved-world-card__load {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  padding: 9px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.saved-world-card__load:hover,
+.saved-world-card__load:focus-visible {
+  background: rgba(158, 231, 255, .04);
+  outline: none;
+}
+
+.saved-world-card__glyph {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border: 1px solid rgba(158, 231, 255, .18);
+  border-radius: 50%;
+  color: #9ee7ff;
+  font: 700 .72rem/1 var(--se-mono);
+}
+
+.saved-world-card__copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.saved-world-card__copy strong {
+  overflow: hidden;
+  color: var(--se-text);
+  font-size: .65rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-world-card__copy small,
+.saved-world-card__copy em {
+  overflow: hidden;
+  color: var(--se-dim);
+  font: 600 .43rem/1.35 var(--se-mono);
+  font-style: normal;
+  letter-spacing: .035em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-world-card__copy em {
+  color: rgba(158, 231, 255, .64);
+}
+
+.saved-world-card__actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--se-line);
+}
+
+.saved-world-card__actions button {
+  min-height: 27px;
+  border: 0;
+  border-right: 1px solid var(--se-line);
+  background: rgba(255, 255, 255, .012);
+  color: var(--se-dim);
+  font: 700 .44rem/1 var(--se-mono);
+  letter-spacing: .045em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.saved-world-card__actions button:last-child {
+  border-right: 0;
+}
+
+.saved-world-card__actions button:hover,
+.saved-world-card__actions button:focus-visible {
+  background: rgba(158, 231, 255, .045);
+  color: var(--se-text-soft);
+  outline: none;
+}
+
+.saved-world-card__actions .is-destructive:hover,
+.saved-world-card__actions .is-destructive:focus-visible {
+  background: rgba(255, 120, 105, .055);
+  color: #ff9d73;
+}
+
+.saved-worlds__privacy {
+  margin-bottom: 0;
+}
+
+@media (max-width: 760px) {
+  .saved-worlds__capture {
+    grid-template-columns: 1fr;
+  }
+
+  .saved-worlds__capture .primary-button {
+    width: 100%;
+  }
+
+  .saved-worlds__list {
+    max-height: none;
+  }
+}
