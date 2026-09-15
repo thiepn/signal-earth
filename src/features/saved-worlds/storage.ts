@@ -64,15 +64,16 @@ function validWorld(value: unknown): SavedWorld | null {
   if (!value || typeof value !== 'object') return null;
   const candidate = value as Partial<SavedWorld>;
   if (typeof candidate.id !== 'string' || !candidate.id || typeof candidate.name !== 'string' || typeof candidate.url !== 'string') return null;
-  if (!Number.isFinite(candidate.createdAt) || !Number.isFinite(candidate.updatedAt)) return null;
+  if (typeof candidate.createdAt !== 'number' || !Number.isFinite(candidate.createdAt)) return null;
+  if (typeof candidate.updatedAt !== 'number' || !Number.isFinite(candidate.updatedAt)) return null;
   const summary = summarizeSavedWorldUrl(candidate.url);
   if (!summary) return null;
   return {
     id: candidate.id.slice(0, 120),
     name: normalizeSavedWorldName(candidate.name),
     url: candidate.url,
-    createdAt: candidate.createdAt!,
-    updatedAt: candidate.updatedAt!,
+    createdAt: candidate.createdAt,
+    updatedAt: candidate.updatedAt,
     summary,
   };
 }
