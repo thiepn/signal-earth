@@ -43,14 +43,14 @@ Make Signal Earth remember how the observatory is used without adding accounts, 
 
 ## Verification
 
-- [x] TypeScript passes on the functional Phase 24 branch.
+- [x] TypeScript passes.
 - [x] **8/8** dedicated Saved Worlds tests pass.
 - [x] Existing share-state tests continue to pass.
 - [x] **36/36** unit-test files pass.
 - [x] **139/139** total unit tests pass.
 - [x] Production Vite build passes.
 - [x] Release verification passes with **15** safe service-worker precache entries.
-- [x] Functional Phase 24 production package: approximately **13.95 MB**.
-- [ ] Exact v1.9.0 branch-head certification passes.
+- [x] Certified v1.9.0 production package: approximately **13.95 MB**.
+- [x] Exact v1.9.0 branch-head certification passes.
 - [ ] GitHub Pages production deployment succeeds.
 - [ ] Real-device visual smoke test remains a separate manual acceptance step.
