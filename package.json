@@ -5,7 +5,7 @@
   "type": "module",
   "description": "A time-aware browser observatory for Earth, orbit, space weather, and the observer.",
   "scripts": {
-    "dev": "vite build && node scripts/inject-precache.mjs",
+    "dev": "vite",
     "build": "vite build && node scripts/inject-precache.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
