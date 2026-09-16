@@ -5,9 +5,9 @@ import { RequestCoordinator } from '../../core/data/reliability';
 import type { OrbitCatalog } from '../../features/orbit/types';
 import { CelesTrakProvider } from './CelesTrakProvider';
 
-const CACHE_KEY = 'celestrak:orbit:curated-v2';
-const CACHE_SCHEMA_VERSION = 2;
-const PROVIDER_VERSION = 'celestrak-curated-omm-v2-reliable';
+const CACHE_KEY = 'celestrak:orbit:curated-v1';
+const CACHE_SCHEMA_VERSION = 1;
+const PROVIDER_VERSION = 'celestrak-curated-omm-v1';
 
 export interface OrbitLoadOptions {
   signal?: AbortSignal;
