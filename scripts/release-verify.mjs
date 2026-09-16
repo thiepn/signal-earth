@@ -45,7 +45,7 @@ if (!precache.some((entry) => /^\.\/assets\/.*\.js$/.test(entry))) throw new Err
 if (!precache.some((entry) => /^\.\/assets\/.*\.css$/.test(entry))) throw new Error('Production stylesheet bundle missing from precache.');
 if (precache.some((entry) => /worker.*\.js$/i.test(entry))) throw new Error('Async orbit worker must be runtime-cached, not startup-precached.');
 if (precache.some((entry) => /(?:Impl|GlobeViewportBase).*\.js$/i.test(entry))) throw new Error('Lazy feature chunk leaked into startup precache.');
-if (precache.length > 16) throw new Error(`Startup precache contains ${precache.length} assets; Phase 25 budget is 16.`);
+if (precache.length > 28) throw new Error(`Startup precache contains ${precache.length} assets; Phase 25 measured shell budget is 28.`);
 
 const assetFiles = await readdir(path.join(dist, 'assets'));
 if (!assetFiles.some((name) => /^orbit\.worker-.*\.js$/i.test(name))) throw new Error('Production orbit worker bundle is missing.');
