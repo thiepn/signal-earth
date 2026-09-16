@@ -45,9 +45,15 @@ export interface OrbitWorkerClientOptions {
   onError?(message: string): void;
 }
 
+/**
+ * Phase 25: the worker is created lazily. Constructing the globe no longer
+ * starts satellite.js/WASM work when Orbit and observer calculations are both
+ * unused. The first catalog load or actual propagation request activates it.
+ */
 export class OrbitWorkerClient {
-  readonly #worker: Worker;
+  #worker: Worker | null = null;
   readonly #options: OrbitWorkerClientOptions;
+  #activeCategories: SatelliteCategory[] = [];
   #sequence = 0;
   #trackSequence = 0;
   #trailSequence = 0;
@@ -64,13 +70,13 @@ export class OrbitWorkerClient {
 
   constructor(options: OrbitWorkerClientOptions) {
     this.#options = options;
-    this.#worker = new Worker(new URL('../../workers/orbit.worker.ts', import.meta.url), { type: 'module', name: 'signal-earth-orbit' });
-    this.#worker.addEventListener('message', this.#onMessage);
-    this.#worker.addEventListener('error', this.#onWorkerError);
   }
 
+  get started(): boolean { return this.#worker !== null; }
+
   loadCatalog(satellites: SatelliteRecord[]): void {
-    if (this.#disposed) return;
+    const worker = this.#ensureWorker();
+    if (!worker) return;
     this.#lastTrackRequest = null;
     this.#lastTrailRequest = null;
     const request: OrbitWorkerRequest = {
@@ -82,25 +88,28 @@ export class OrbitWorkerClient {
         omm: satellite.omm,
       })),
     };
-    this.#worker.postMessage(request);
+    worker.postMessage(request);
   }
 
   setActiveCategories(categories: SatelliteCategory[]): void {
     if (this.#disposed) return;
-    this.#worker.postMessage({ type: 'SET_ACTIVE_CATEGORIES', categories } satisfies OrbitWorkerRequest);
+    this.#activeCategories = [...categories];
+    this.#worker?.postMessage({ type: 'SET_ACTIVE_CATEGORIES', categories } satisfies OrbitWorkerRequest);
   }
 
   requestFrame(timestamp: number): number {
-    if (this.#disposed) return -1;
+    const worker = this.#ensureWorker();
+    if (!worker) return -1;
     const sequence = ++this.#sequence;
-    this.#worker.postMessage({ type: 'PROPAGATE', timestamp, sequence } satisfies OrbitWorkerRequest);
+    worker.postMessage({ type: 'PROPAGATE', timestamp, sequence } satisfies OrbitWorkerRequest);
     return sequence;
   }
 
   requestWindow(startTimestamp: number, endTimestamp: number, sampleCount: number): number {
-    if (this.#disposed) return -1;
+    const worker = this.#ensureWorker();
+    if (!worker) return -1;
     const sequence = ++this.#sequence;
-    this.#worker.postMessage({ type: 'PROPAGATE_WINDOW', startTimestamp, endTimestamp, sampleCount, sequence } satisfies OrbitWorkerRequest);
+    worker.postMessage({ type: 'PROPAGATE_WINDOW', startTimestamp, endTimestamp, sampleCount, sequence } satisfies OrbitWorkerRequest);
     return sequence;
   }
 
@@ -110,12 +119,14 @@ export class OrbitWorkerClient {
     const kind = options.kind ?? 'orbit';
     const previous = this.#lastTrackRequest;
     if (!options.force && previous?.satelliteId === id && previous.kind === kind && Math.abs(timestamp - previous.timestamp) < 30_000) return -1;
+    const worker = this.#ensureWorker();
+    if (!worker) return -1;
     this.#lastTrackRequest = { satelliteId: id, timestamp, kind };
     const sequence = ++this.#trackSequence;
     const request: OrbitWorkerRequest = options.samples === undefined
       ? { type: 'GENERATE_TRACK', satelliteId: id, timestamp, sequence, kind }
       : { type: 'GENERATE_TRACK', satelliteId: id, timestamp, sequence, kind, samples: options.samples };
-    this.#worker.postMessage(request);
+    worker.postMessage(request);
     return sequence;
   }
 
@@ -124,18 +135,20 @@ export class OrbitWorkerClient {
     const id = String(satelliteId);
     const previous = this.#lastTrailRequest;
     if (!options.force && previous?.satelliteId === id && previous.kind === kind && Math.abs(timestamp - previous.timestamp) < 30_000) return -1;
+    const worker = this.#ensureWorker();
+    if (!worker) return -1;
     this.#lastTrailRequest = { satelliteId: id, timestamp, kind };
     const sequence = ++this.#trailSequence;
     const request: OrbitWorkerRequest = options.samples === undefined
       ? { type: 'GENERATE_TRACK', satelliteId: id, timestamp, sequence, kind }
       : { type: 'GENERATE_TRACK', satelliteId: id, timestamp, sequence, kind, samples: options.samples };
-    this.#worker.postMessage(request);
+    worker.postMessage(request);
     return sequence;
   }
 
-
   requestObserverSky(observer: ObserverLocation, timestamp: number, options: { minElevationDeg?: number; maxResults?: number } = {}): number {
-    if (this.#disposed) return -1;
+    const worker = this.#ensureWorker();
+    if (!worker) return -1;
     const sequence = ++this.#observerSequence;
     const request: OrbitWorkerRequest = {
       type: 'OBSERVER_SKY', timestamp, sequence,
@@ -143,12 +156,13 @@ export class OrbitWorkerClient {
       ...(options.minElevationDeg === undefined ? {} : { minElevationDeg: options.minElevationDeg }),
       ...(options.maxResults === undefined ? {} : { maxResults: options.maxResults }),
     };
-    this.#worker.postMessage(request);
+    worker.postMessage(request);
     return sequence;
   }
 
   requestPasses(satelliteId: EntityId, observer: ObserverLocation, startTimestamp: number, options: { horizonHours?: number; minElevationDeg?: number } = {}): number {
-    if (this.#disposed) return -1;
+    const worker = this.#ensureWorker();
+    if (!worker) return -1;
     const sequence = ++this.#passSequence;
     const request: OrbitWorkerRequest = {
       type: 'PREDICT_PASSES', satelliteId: String(satelliteId), startTimestamp, sequence,
@@ -156,7 +170,7 @@ export class OrbitWorkerClient {
       ...(options.horizonHours === undefined ? {} : { horizonHours: options.horizonHours }),
       ...(options.minElevationDeg === undefined ? {} : { minElevationDeg: options.minElevationDeg }),
     };
-    this.#worker.postMessage(request);
+    worker.postMessage(request);
     return sequence;
   }
 
@@ -166,7 +180,7 @@ export class OrbitWorkerClient {
   }
 
   clear(): void {
-    if (this.#disposed) return;
+    if (this.#disposed || !this.#worker) return;
     this.#lastTrackRequest = null;
     this.#lastTrailRequest = null;
     this.#worker.postMessage({ type: 'CLEAR' } satisfies OrbitWorkerRequest);
@@ -175,9 +189,25 @@ export class OrbitWorkerClient {
   dispose(): void {
     if (this.#disposed) return;
     this.#disposed = true;
-    this.#worker.removeEventListener('message', this.#onMessage);
-    this.#worker.removeEventListener('error', this.#onWorkerError);
-    this.#worker.terminate();
+    if (this.#worker) {
+      this.#worker.removeEventListener('message', this.#onMessage);
+      this.#worker.removeEventListener('error', this.#onWorkerError);
+      this.#worker.terminate();
+      this.#worker = null;
+    }
+  }
+
+  #ensureWorker(): Worker | null {
+    if (this.#disposed) return null;
+    if (this.#worker) return this.#worker;
+    const worker = new Worker(new URL('../../workers/orbit.worker.ts', import.meta.url), { type: 'module', name: 'signal-earth-orbit' });
+    worker.addEventListener('message', this.#onMessage);
+    worker.addEventListener('error', this.#onWorkerError);
+    this.#worker = worker;
+    if (this.#activeCategories.length) {
+      worker.postMessage({ type: 'SET_ACTIVE_CATEGORIES', categories: this.#activeCategories } satisfies OrbitWorkerRequest);
+    }
+    return worker;
   }
 
   #onMessage = (event: MessageEvent<OrbitWorkerResponse>): void => {
