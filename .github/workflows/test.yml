@@ -1,4 +1,4 @@
-name: Verify Release Candidate
+name: Verify Release
 
 on:
   push:
