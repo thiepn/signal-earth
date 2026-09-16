@@ -1,0 +1,66 @@
+name: Temporary 2.1.1 Exact Source Certification
+
+on:
+  push:
+    branches:
+      - certify-2.1.1-performance
+    paths:
+      - '.github/workflows/certify-2.1.1-exact.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-exact-source:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ea07d3ad3fe1ad24f43665c94030e05381e8c89a
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - run: npm run release
+      - name: Confirm exact source
+        run: test "$(git rev-parse HEAD)" = "ea07d3ad3fe1ad24f43665c94030e05381e8c89a"
+
+  interaction-exact-source:
+    name: exact-source (${{ matrix.project }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: chromium-desktop
+            browser: chromium
+          - project: firefox-desktop
+            browser: firefox
+          - project: webkit-desktop
+            browser: webkit
+          - project: chromium-ultrawide
+            browser: chromium
+          - project: android-chromium
+            browser: chromium
+          - project: ios-webkit
+            browser: webkit
+          - project: tablet-webkit
+            browser: webkit
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ea07d3ad3fe1ad24f43665c94030e05381e8c89a
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npm run build
+      - run: npx playwright test --project=${{ matrix.project }}
+      - name: Confirm exact source
+        if: always()
+        run: test "$(git rev-parse HEAD)" = "ea07d3ad3fe1ad24f43665c94030e05381e8c89a"
