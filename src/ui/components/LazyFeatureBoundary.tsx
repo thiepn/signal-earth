@@ -12,18 +12,18 @@ interface LazyFeatureBoundaryState {
 }
 
 export class LazyFeatureBoundary extends Component<LazyFeatureBoundaryProps, LazyFeatureBoundaryState> {
-  state: LazyFeatureBoundaryState = { failed: false };
+  override state: LazyFeatureBoundaryState = { failed: false };
 
   static getDerivedStateFromError(): LazyFeatureBoundaryState {
     return { failed: true };
   }
 
-  componentDidCatch(_error: Error, _info: ErrorInfo): void {
+  override componentDidCatch(_error: Error, _info: ErrorInfo): void {
     // React has already contained the rejected lazy import. Keep the failure
     // local to this feature; the rest of the observatory remains interactive.
   }
 
-  render() {
+  override render() {
     if (!this.state.failed) return this.props.children;
     const className = `${this.props.className ?? 'panel-surface'} lazy-feature-error`;
     return (
