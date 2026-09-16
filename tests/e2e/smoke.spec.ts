@@ -137,6 +137,11 @@ test('search opens from keyboard and navigates to a bundled city @production', a
 });
 
 test('primary panels remain reachable and dismissible @production', async ({ page }, testInfo) => {
+  // This intentionally exercises every primary mobile sheet in one session.
+  // SwiftShader on hosted Chromium is much slower than physical mobile GPUs,
+  // so preserve strict per-action timeouts while allowing the full sweep to finish.
+  test.setTimeout(120_000);
+
   const pageErrors = collectPageErrors(page);
   await boot(page);
 
@@ -288,23 +293,30 @@ test('mobile orientation changes keep controls inside the viewport', async ({ pa
   await expectViewportContained(page);
 });
 
-test('rejected Search lazy chunk is contained instead of crashing the app', async ({ page }, testInfo) => {
-  test.skip(Boolean(process.env.QA_BASE_URL), 'Chunk-failure injection is only for the local production build.');
-  test.skip(testInfo.project.name !== 'chromium-desktop', 'Chunk-failure containment is engine-independent.');
-  await page.route('**/SearchOverlayImpl-*.js', (route) => route.abort('failed'));
-  await boot(page);
-  await page.getByRole('button', { name: 'Search Signal Earth' }).click();
-  await expect(page.getByRole('alert')).toContainText(/Search.*failed to load/i);
-  await expect(page.getByRole('button', { name: 'Reset Signal Earth globe' })).toBeVisible();
-});
+test.describe('lazy chunk failure containment', () => {
+  // Production service workers pre-cache lazy chunks. Block them only for these
+  // synthetic network-failure tests so Playwright can deterministically abort
+  // the requested module instead of receiving it from the service-worker cache.
+  test.use({ serviceWorkers: 'block' });
 
-test('rejected globe chunk leaves the application shell recoverable', async ({ page }, testInfo) => {
-  test.skip(Boolean(process.env.QA_BASE_URL), 'Chunk-failure injection is only for the local production build.');
-  test.skip(testInfo.project.name !== 'chromium-desktop', 'Critical chunk containment is engine-independent.');
-  await page.route('**/GlobeViewportBase-*.js', (route) => route.abort('failed'));
-  await page.goto('./', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('button', { name: 'Reset Signal Earth globe' })).toBeVisible();
-  await expect(page.getByRole('alert')).toContainText(/3D globe.*failed to load/i);
-  await page.getByRole('button', { name: 'Search Signal Earth' }).click();
-  await expect(page.getByRole('dialog', { name: 'Search and commands' })).toBeVisible();
+  test('rejected Search lazy chunk is contained instead of crashing the app', async ({ page }, testInfo) => {
+    test.skip(Boolean(process.env.QA_BASE_URL), 'Chunk-failure injection is only for the local production build.');
+    test.skip(testInfo.project.name !== 'chromium-desktop', 'Chunk-failure containment is engine-independent.');
+    await page.route('**/SearchOverlayImpl-*.js', (route) => route.abort('failed'));
+    await boot(page);
+    await page.getByRole('button', { name: 'Search Signal Earth' }).click();
+    await expect(page.getByRole('alert')).toContainText(/Search.*failed to load/i);
+    await expect(page.getByRole('button', { name: 'Reset Signal Earth globe' })).toBeVisible();
+  });
+
+  test('rejected globe chunk leaves the application shell recoverable', async ({ page }, testInfo) => {
+    test.skip(Boolean(process.env.QA_BASE_URL), 'Chunk-failure injection is only for the local production build.');
+    test.skip(testInfo.project.name !== 'chromium-desktop', 'Critical chunk containment is engine-independent.');
+    await page.route('**/GlobeViewportBase-*.js', (route) => route.abort('failed'));
+    await page.goto('./', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('button', { name: 'Reset Signal Earth globe' })).toBeVisible();
+    await expect(page.getByRole('alert')).toContainText(/3D globe.*failed to load/i);
+    await page.getByRole('button', { name: 'Search Signal Earth' }).click();
+    await expect(page.getByRole('dialog', { name: 'Search and commands' })).toBeVisible();
+  });
 });
