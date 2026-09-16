@@ -51,14 +51,14 @@ async function cacheFirst(request) {
 
 async function navigationFallback(request) {
   try {
-    const response = await fetch(request);
-    if (isCacheableResponse(response)) {
-      const cache = await caches.open(RUNTIME_CACHE);
-      await cache.put(request, response.clone());
-    }
-    return response;
+    // Navigation is network-first, but query/share variants all represent the
+    // same app shell. Do not duplicate the HTML shell in the runtime cache for
+    // every unique URL; offline navigation falls back to the precached shell.
+    return await fetch(request);
   } catch {
-    return (await caches.match(scopedUrl('./index.html'))) || (await caches.match(scopedUrl('./'))) || Response.error();
+    return (await caches.match(scopedUrl('./index.html')))
+      || (await caches.match(scopedUrl('./')))
+      || Response.error();
   }
 }
 

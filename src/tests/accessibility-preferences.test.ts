@@ -34,4 +34,20 @@ describe('accessibility preferences', () => {
     saveAccessibilityPreferences(prefs, storage);
     expect(loadAccessibilityPreferences(storage)).toEqual(prefs);
   });
+
+  it('fails open when accessing the global localStorage property throws', () => {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      get() { throw new Error('storage blocked'); },
+    });
+    try {
+      expect(loadAccessibilityPreferences()).toEqual({ motion: 'system', contrast: 'system' });
+      expect(() => saveAccessibilityPreferences({ motion: 'reduced', contrast: 'high' })).not.toThrow();
+    } finally {
+      if (descriptor) Object.defineProperty(globalThis, 'localStorage', descriptor);
+      else Reflect.deleteProperty(globalThis, 'localStorage');
+    }
+  });
+
 });

@@ -23,6 +23,14 @@ function mediaMatches(query: string): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia(query).matches;
 }
 
+function safeLocalStorage(): Storage | null {
+  try {
+    return typeof globalThis.localStorage === 'undefined' ? null : globalThis.localStorage;
+  } catch {
+    return null;
+  }
+}
+
 export function detectSystemAccessibilityPreferences(): SystemAccessibilityPreferences {
   return {
     reducedMotion: mediaMatches('(prefers-reduced-motion: reduce)'),
@@ -43,10 +51,11 @@ export function effectiveHighContrast(preferences: AccessibilityPreferences, sys
   return system.highContrast || system.forcedColors;
 }
 
-export function loadAccessibilityPreferences(storage: Pick<Storage, 'getItem'> | null = typeof localStorage === 'undefined' ? null : localStorage): AccessibilityPreferences {
-  if (!storage) return { ...DEFAULT_ACCESSIBILITY_PREFERENCES };
+export function loadAccessibilityPreferences(storage: Pick<Storage, 'getItem'> | null | undefined = undefined): AccessibilityPreferences {
+  const target = storage === undefined ? safeLocalStorage() : storage;
+  if (!target) return { ...DEFAULT_ACCESSIBILITY_PREFERENCES };
   try {
-    const raw = storage.getItem(STORAGE_KEY);
+    const raw = target.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_ACCESSIBILITY_PREFERENCES };
     const parsed = JSON.parse(raw) as Partial<AccessibilityPreferences>;
     const motion: MotionPreference = parsed.motion === 'reduced' || parsed.motion === 'full' || parsed.motion === 'system' ? parsed.motion : 'system';
@@ -57,9 +66,10 @@ export function loadAccessibilityPreferences(storage: Pick<Storage, 'getItem'> |
   }
 }
 
-export function saveAccessibilityPreferences(preferences: AccessibilityPreferences, storage: Pick<Storage, 'setItem'> | null = typeof localStorage === 'undefined' ? null : localStorage): void {
-  if (!storage) return;
-  try { storage.setItem(STORAGE_KEY, JSON.stringify(preferences)); } catch { /* storage may be unavailable */ }
+export function saveAccessibilityPreferences(preferences: AccessibilityPreferences, storage: Pick<Storage, 'setItem'> | null | undefined = undefined): void {
+  const target = storage === undefined ? safeLocalStorage() : storage;
+  if (!target) return;
+  try { target.setItem(STORAGE_KEY, JSON.stringify(preferences)); } catch { /* storage may be unavailable */ }
 }
 
 export function subscribeSystemAccessibilityPreferences(listener: (preferences: SystemAccessibilityPreferences) => void): () => void {

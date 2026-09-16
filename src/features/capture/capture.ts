@@ -31,12 +31,12 @@ export function downloadBlob(blob: Blob, filename: string): void {
 export async function composeSignalEarthCapture(source: Blob, metadata: CaptureMetadata): Promise<Blob> {
   const bitmap = await createImageBitmap(source);
   const canvas = document.createElement('canvas');
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('2D capture context is unavailable.');
-  context.drawImage(bitmap, 0, 0);
-  bitmap.close();
+  try {
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('2D capture context is unavailable.');
+    context.drawImage(bitmap, 0, 0);
 
   const dprScale = Math.max(1, Math.min(2, canvas.width / 1280));
   const pad = Math.round(28 * dprScale);
@@ -57,9 +57,12 @@ export async function composeSignalEarthCapture(source: Blob, metadata: CaptureM
   context.font = `500 ${Math.round(10 * dprScale)}px ui-monospace, monospace`;
   context.fillText(`${metadata.visualMode.toUpperCase()} · ${metadata.pointOfView.lat.toFixed(2)}°, ${metadata.pointOfView.lng.toFixed(2)}°`, pad + Math.round(16 * dprScale), pad + Math.round(72 * dprScale));
 
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('PNG encoding failed.')), 'image/png');
-  });
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('PNG encoding failed.')), 'image/png');
+    });
+  } finally {
+    bitmap.close();
+  }
 }
 
 export function preferredRecordingMimeType(): { mimeType: string; extension: 'webm' | 'mp4' } | null {
@@ -73,27 +76,59 @@ export function preferredRecordingMimeType(): { mimeType: string; extension: 'we
   return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate.mimeType)) ?? null;
 }
 
+function stopMediaStream(stream: MediaStream): void {
+  for (const track of stream.getTracks()) track.stop();
+}
+
 export async function recordCanvas(stream: MediaStream, durationMs = 10_000): Promise<RecordingResult> {
   const preferred = preferredRecordingMimeType();
-  if (!preferred) throw new Error('Canvas recording is not supported by this browser.');
-  const recorder = new MediaRecorder(stream, { mimeType: preferred.mimeType, videoBitsPerSecond: 7_000_000 });
+  if (!preferred) {
+    stopMediaStream(stream);
+    throw new Error('Canvas recording is not supported by this browser.');
+  }
+
+  let recorder: MediaRecorder;
+  try {
+    recorder = new MediaRecorder(stream, { mimeType: preferred.mimeType, videoBitsPerSecond: 7_000_000 });
+  } catch (error) {
+    stopMediaStream(stream);
+    throw error instanceof Error ? error : new Error('The browser could not initialize canvas recording.');
+  }
+
   const chunks: BlobPart[] = [];
   return new Promise<RecordingResult>((resolve, reject) => {
     let timer = 0;
+    let settled = false;
+    const cleanup = () => {
+      window.clearTimeout(timer);
+      stopMediaStream(stream);
+    };
+    const fail = (error: Error) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+
     recorder.ondataavailable = (event) => { if (event.data.size > 0) chunks.push(event.data); };
-    recorder.onerror = () => {
-      window.clearTimeout(timer);
-      for (const track of stream.getTracks()) track.stop();
-      reject(new Error('The browser stopped the recording unexpectedly.'));
-    };
+    recorder.onerror = () => fail(new Error('The browser stopped the recording unexpectedly.'));
     recorder.onstop = () => {
-      window.clearTimeout(timer);
-      for (const track of stream.getTracks()) track.stop();
-      resolve({ blob: new Blob(chunks, { type: preferred.mimeType }), extension: preferred.extension });
+      if (settled) return;
+      settled = true;
+      cleanup();
+      const blob = new Blob(chunks, { type: preferred.mimeType });
+      if (blob.size === 0) reject(new Error('The browser produced an empty recording.'));
+      else resolve({ blob, extension: preferred.extension });
     };
-    recorder.start(500);
+
+    try {
+      recorder.start(500);
+    } catch (error) {
+      fail(error instanceof Error ? error : new Error('The browser could not start canvas recording.'));
+      return;
+    }
     timer = window.setTimeout(() => {
       if (recorder.state !== 'inactive') recorder.stop();
-    }, durationMs);
+    }, Math.max(250, durationMs));
   });
 }

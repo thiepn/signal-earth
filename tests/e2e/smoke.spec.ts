@@ -182,6 +182,45 @@ test('primary panels remain reachable and dismissible @production', async ({ pag
   expect(pageErrors, `${testInfo.project.name} emitted uncaught page errors`).toEqual([]);
 });
 
+test('global shortcuts do not hijack focused controls @production', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop', 'Shortcut focus behavior only needs one browser engine.');
+  await boot(page);
+  const playback = page.locator('.desktop-timeline').getByRole('button', { name: /Pause time|Play time/ });
+  const initialLabel = await playback.getAttribute('aria-label');
+  expect(initialLabel).toBeTruthy();
+
+  const settings = page.getByRole('button', { name: 'Open settings' });
+  await settings.focus();
+  await page.keyboard.press('Space');
+  await expect(page.locator('.desktop-settings')).toBeVisible();
+  await expect(playback).toHaveAttribute('aria-label', initialLabel!);
+});
+
+test('query navigations do not accumulate duplicate runtime shell entries @production', async ({ page, browserName }, testInfo) => {
+  test.skip(browserName !== 'chromium' || testInfo.project.name !== 'chromium-desktop', 'Service-worker cache audit runs once in Chromium desktop.');
+  await boot(page);
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.goto('./?audit_nav=one', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('.app-shell')).toBeVisible();
+  await page.goto('./?audit_nav=two', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('.app-shell')).toBeVisible();
+
+  const cachedAuditNavigations = await page.evaluate(async () => {
+    const matches: string[] = [];
+    for (const name of await caches.keys()) {
+      if (!name.endsWith('-runtime')) continue;
+      const cache = await caches.open(name);
+      for (const request of await cache.keys()) {
+        const url = new URL(request.url);
+        if (url.origin === location.origin && url.searchParams.has('audit_nav')) matches.push(url.href);
+      }
+    }
+    return matches;
+  });
+  expect(cachedAuditNavigations).toEqual([]);
+});
+
 test('timeline controls keep deterministic interaction state @production', async ({ page }) => {
   await boot(page);
   let scope = page.locator('.desktop-timeline');

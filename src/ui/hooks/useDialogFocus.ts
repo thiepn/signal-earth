@@ -10,7 +10,7 @@ export function useDialogFocus<T extends HTMLElement>(open: boolean, ref: RefObj
     if (!open || !ref.current) return;
     const dialog = ref.current;
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const focusables = () => Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((element) => !element.hasAttribute('hidden') && element.getAttribute('aria-hidden') !== 'true');
+    const focusables = () => Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((element) => !element.hidden && !element.inert && element.getAttribute('aria-hidden') !== 'true' && element.getClientRects().length > 0);
     const initial = focusables()[0] ?? dialog;
     const frame = window.requestAnimationFrame(() => initial.focus({ preventScroll: true }));
 
@@ -33,7 +33,7 @@ export function useDialogFocus<T extends HTMLElement>(open: boolean, ref: RefObj
     return () => {
       window.cancelAnimationFrame(frame);
       dialog.removeEventListener('keydown', onKeyDown);
-      previouslyFocused?.focus({ preventScroll: true });
+      if (previouslyFocused?.isConnected && !previouslyFocused.inert) previouslyFocused.focus({ preventScroll: true });
     };
   }, [open, onEscape, ref]);
 }

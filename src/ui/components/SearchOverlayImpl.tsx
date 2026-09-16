@@ -52,6 +52,9 @@ export function SearchOverlay({ open, documents, onClose, onResult, onCommand }:
   }, [open]);
 
   useEffect(() => setActiveIndex(0), [query]);
+  useEffect(() => {
+    setActiveIndex((index) => itemCount === 0 ? 0 : Math.min(index, itemCount - 1));
+  }, [itemCount]);
   useDialogFocus(open, dialogRef);
 
   if (!open) return null;

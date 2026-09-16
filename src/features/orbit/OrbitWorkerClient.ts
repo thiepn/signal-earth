@@ -1,7 +1,7 @@
 import type { EntityId } from '../../shared/types/entities';
 import type { ObserverLocation, ObserverPassForecast, SatellitePass } from '../above-me/types';
 import type { SatelliteCategory } from '../../shared/types/orbit';
-import type { OrbitWorkerRequest, OrbitWorkerResponse } from '../../workers/orbit.worker';
+import type { OrbitWorkerRequest, OrbitWorkerResponse, OrbitWorkerSatellite } from '../../workers/orbit.worker';
 import type { OrbitTrack, OrbitTrackKind } from './interaction';
 import type { SatelliteRecord } from './types';
 
@@ -52,8 +52,10 @@ export interface OrbitWorkerClientOptions {
  */
 export class OrbitWorkerClient {
   #worker: Worker | null = null;
+  #catalogPayload: OrbitWorkerSatellite[] | null = null;
   readonly #options: OrbitWorkerClientOptions;
   #activeCategories: SatelliteCategory[] = [];
+  #activeCategoriesInitialized = false;
   #sequence = 0;
   #trackSequence = 0;
   #trailSequence = 0;
@@ -75,25 +77,27 @@ export class OrbitWorkerClient {
   get started(): boolean { return this.#worker !== null; }
 
   loadCatalog(satellites: SatelliteRecord[]): void {
-    const worker = this.#ensureWorker();
-    if (!worker) return;
+    if (this.#disposed) return;
     this.#lastTrackRequest = null;
     this.#lastTrailRequest = null;
-    const request: OrbitWorkerRequest = {
-      type: 'LOAD_CATALOG',
-      satellites: satellites.map((satellite) => ({
-        id: satellite.id,
-        category: satellite.category,
-        categories: satellite.categories,
-        omm: satellite.omm,
-      })),
-    };
-    worker.postMessage(request);
+    this.#catalogPayload = satellites.map((satellite) => ({
+      id: satellite.id,
+      category: satellite.category,
+      categories: satellite.categories,
+      omm: satellite.omm,
+    }));
+    const hadWorker = this.#worker !== null;
+    const worker = this.#ensureWorker();
+    if (!worker) return;
+    // A newly created worker is rehydrated by #ensureWorker. Existing workers
+    // need the updated catalog posted explicitly.
+    if (hadWorker) worker.postMessage({ type: 'LOAD_CATALOG', satellites: this.#catalogPayload } satisfies OrbitWorkerRequest);
   }
 
   setActiveCategories(categories: SatelliteCategory[]): void {
     if (this.#disposed) return;
     this.#activeCategories = [...categories];
+    this.#activeCategoriesInitialized = true;
     this.#worker?.postMessage({ type: 'SET_ACTIVE_CATEGORIES', categories } satisfies OrbitWorkerRequest);
   }
 
@@ -180,15 +184,17 @@ export class OrbitWorkerClient {
   }
 
   clear(): void {
-    if (this.#disposed || !this.#worker) return;
+    if (this.#disposed) return;
+    this.#catalogPayload = null;
     this.#lastTrackRequest = null;
     this.#lastTrailRequest = null;
-    this.#worker.postMessage({ type: 'CLEAR' } satisfies OrbitWorkerRequest);
+    this.#worker?.postMessage({ type: 'CLEAR' } satisfies OrbitWorkerRequest);
   }
 
   dispose(): void {
     if (this.#disposed) return;
     this.#disposed = true;
+    this.#catalogPayload = null;
     if (this.#worker) {
       this.#worker.removeEventListener('message', this.#onMessage);
       this.#worker.removeEventListener('error', this.#onWorkerError);
@@ -204,8 +210,11 @@ export class OrbitWorkerClient {
     worker.addEventListener('message', this.#onMessage);
     worker.addEventListener('error', this.#onWorkerError);
     this.#worker = worker;
-    if (this.#activeCategories.length) {
+    if (this.#activeCategoriesInitialized) {
       worker.postMessage({ type: 'SET_ACTIVE_CATEGORIES', categories: this.#activeCategories } satisfies OrbitWorkerRequest);
+    }
+    if (this.#catalogPayload) {
+      worker.postMessage({ type: 'LOAD_CATALOG', satellites: this.#catalogPayload } satisfies OrbitWorkerRequest);
     }
     return worker;
   }
@@ -258,6 +267,15 @@ export class OrbitWorkerClient {
   };
 
   #onWorkerError = (event: ErrorEvent): void => {
+    const worker = this.#worker;
+    if (worker) {
+      worker.removeEventListener('message', this.#onMessage);
+      worker.removeEventListener('error', this.#onWorkerError);
+      worker.terminate();
+      if (this.#worker === worker) this.#worker = null;
+    }
+    this.#lastTrackRequest = null;
+    this.#lastTrailRequest = null;
     this.#options.onError?.(event.message || 'Orbit worker failed.');
   };
 }

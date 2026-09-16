@@ -140,6 +140,35 @@ async function copyTextToClipboard(value: string): Promise<void> {
   if (!copied) throw new Error('Clipboard access is unavailable.');
 }
 
+const NATIVE_VALUE_CONTROL_KEYS = new Set([
+  ' ', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+  'Home', 'End', 'PageUp', 'PageDown',
+]);
+
+function blocksGlobalShortcut(target: EventTarget | null, key: string): boolean {
+  if (!(target instanceof Element)) return false;
+
+  // Text-entry/select controls own their keyboard surface completely.
+  if (target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"], [role="combobox"]')) {
+    return key !== 'Escape';
+  }
+
+  // Value/menu controls own activation and navigation keys, but a
+  // restored focus ring must not suppress unrelated app shortcuts.
+  if (target.closest('[role="slider"], [role="spinbutton"], [role="switch"], [role="menuitem"]')) {
+    return NATIVE_VALUE_CONTROL_KEYS.has(key);
+  }
+
+  // Buttons and links natively consume Space/Enter. Letter shortcuts
+  // and '/' remain global so focus restoration after closing a dialog
+  // does not strand the observatory keyboard controls.
+  if (target.closest('button, a[href], [role="button"], [role="link"]')) {
+    return key === ' ' || key === 'Enter';
+  }
+
+  return false;
+}
+
 export function App() {
   const initialShareRef = useRef(parseShareView(window.location.href));
   const initialAppStateRef = useRef({
@@ -441,15 +470,6 @@ export function App() {
       controller.abort();
     };
   }, [appState.layers.earthquakes, earthquakeRefresh, earthquakeWindow, emit, nowActive, pushToast]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    loadSearchCountries(controller.signal).then(setSearchCountries).catch(() => {
-      // Country navigation is optional context. Search remains fully usable without it.
-      setSearchCountries([]);
-    });
-    return () => controller.abort();
-  }, []);
 
   useEffect(() => {
     if (!appState.layers.events && !nowActive && !(appState.layers.weather && atmosphereSettings.stormTracks)) return undefined;
@@ -1625,11 +1645,10 @@ export function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const typing = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
-      if (typing && event.key !== 'Escape') return;
+      const shortcutBlocked = blocksGlobalShortcut(event.target, event.key);
+      if (shortcutBlocked && event.key !== 'Escape') return;
 
-      if (event.key === '/' && !typing) {
+      if (event.key === '/' && !shortcutBlocked) {
         event.preventDefault();
         if (!tourEngineRef.current.active) setSearchOpen(true);
       } else if (event.key === 'Escape') {
@@ -1643,16 +1662,16 @@ export function App() {
         setHereOpen(false);
         setNowOpen(false);
         setMobileSheet(null);
-      } else if (event.key.toLowerCase() === 'n' && !typing) {
+      } else if (event.key.toLowerCase() === 'n' && !shortcutBlocked) {
         openNow();
-      } else if (event.key.toLowerCase() === 'b' && !typing) {
+      } else if (event.key.toLowerCase() === 'b' && !shortcutBlocked) {
         setBriefingLauncherOpen((value) => !value);
-      } else if (event.code === 'Space' && !typing) {
+      } else if (event.code === 'Space' && !shortcutBlocked) {
         event.preventDefault();
         toggleTimePlayback();
-      } else if (event.key.toLowerCase() === 'r' && !typing) {
+      } else if (event.key.toLowerCase() === 'r' && !shortcutBlocked) {
         resetGlobe();
-      } else if (!typing && ['1', '2', '3', '4'].includes(event.key)) {
+      } else if (!shortcutBlocked && ['1', '2', '3', '4'].includes(event.key)) {
         const modes: VisualMode[] = ['earth', 'signal', 'night', 'wireframe'];
         setVisualMode(modes[Number(event.key) - 1]!);
       }

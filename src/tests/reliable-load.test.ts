@@ -121,4 +121,33 @@ describe('reliable provider loading', () => {
     expect(cache.api.set).not.toHaveBeenCalled();
     expect(providerHealthRegistry.getSnapshot().find((item) => item.provider === 'usgs')).toMatchObject({ status: 'error' });
   });
+
+  it('times out a hung provider attempt and falls back to valid stale data', async () => {
+    const now = Date.now();
+    const cache = fakeCache({
+      key: 'test', provider: 'usgs', fetchedAt: now - 5_000, sourceUpdatedAt: now - 5_000,
+      expiresAt: now - 4_000, schemaVersion: 2, providerVersion: 'new',
+      value: { value: 9, timestamp: now - 5_000, partial: false },
+    });
+    const fetchRaw = vi.fn(() => new Promise<RawPayload>(() => {}));
+
+    const snapshot = await loadReliableSnapshot({
+      provider: provider(fetchRaw),
+      cache: cache.cache,
+      cacheKey: 'test',
+      cacheSchemaVersion: 2,
+      providerVersion: 'new',
+      memory: null,
+      setMemory: () => {},
+      coordinator: new RequestCoordinator(),
+      sourceUpdatedAt: (data) => data.timestamp,
+      validationAttempts: 1,
+      requestTimeoutMs: 20,
+    });
+
+    expect(snapshot.freshness).toBe('stale');
+    expect(snapshot.data.value).toBe(9);
+    expect(fetchRaw).toHaveBeenCalledTimes(1);
+  });
+
 });

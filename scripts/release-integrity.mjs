@@ -66,10 +66,20 @@ for (const workflow of workflows) {
 }
 
 const testWorkflow = await read('.github/workflows/test.yml');
+const qaWorkflow = await read('.github/workflows/qa.yml');
 const deployWorkflow = await read('.github/workflows/deploy.yml');
 if (!/^name:\s*Verify Release\s*$/m.test(testWorkflow)) throw new Error('Verification workflow must be named Verify Release for the final release pipeline.');
 if (/Release Candidate|Verify V1/.test(testWorkflow)) throw new Error('Verification workflow still carries prerelease/V1 naming.');
 if (/name:\s*Deploy Signal Earth V1/.test(deployWorkflow)) throw new Error('Deployment workflow still carries stale V1 naming.');
+
+if (!/[\"']v\*[\"']/.test(qaWorkflow)) throw new Error('Cross-browser QA must run on versioned maintenance branches.');
+const uploadArtifactV7 = 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a';
+if (!testWorkflow.includes(uploadArtifactV7) || !qaWorkflow.includes(uploadArtifactV7)) {
+  throw new Error('Verification and QA must use the pinned Node-24-based upload-artifact v7.0.1 action.');
+}
+const navigationFallback = swSource.match(/async function navigationFallback\(request\) \{[\s\S]*?\n\}/);
+if (!navigationFallback) throw new Error('Service-worker navigation fallback could not be audited.');
+if (/cache\.put\s*\(/.test(navigationFallback[0])) throw new Error('Navigation URLs must not create query-specific runtime shell cache entries.');
 
 const publishWorkflow = await read('.github/workflows/publish-release.yml');
 if (!publishWorkflow.includes('workflows: ["Verify Release"]')) throw new Error('Release publisher must be gated by the Verify Release workflow.');

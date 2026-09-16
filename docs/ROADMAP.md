@@ -197,3 +197,7 @@ Phase 30 is release-only. It changes no providers, scientific semantics, persist
 ## Roadmap status
 
 The Signal Earth Phase 0–30 development roadmap is complete with **Signal Earth 2.0.0**. Future maintenance is versioned product maintenance rather than continuation of the 0–30 build roadmap.
+
+## 2.x maintenance
+
+**2.0.1 — post-release stabilization:** audited and hardened focused-control shortcuts, provider request deadlines/fallback, service-worker navigation caching, storage failure handling, capture cleanup, Orbit worker recovery, observer persistence validation, Search/dialog accessibility state and version-branch CI durability. This is maintenance of the completed product, not Phase 31.

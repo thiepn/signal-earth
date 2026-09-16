@@ -24,6 +24,7 @@ export interface ReliableLoadConfig<TRaw, TNormalized> {
   partial?(data: TNormalized): boolean;
   maxSourceFutureSkewMs?: number;
   validationAttempts?: number;
+  requestTimeoutMs?: number;
 }
 
 function cachedSnapshot<T>(entry: CacheEntry<T>, config: ReliableLoadConfig<unknown, T>, freshness: 'cached' | 'stale'): DataSnapshot<T> {
@@ -81,6 +82,40 @@ function retryable(error: ReliabilityError): boolean {
   return error.kind === 'http' && (error.status === 408 || error.status === 425 || error.status === 500 || error.status === 502 || error.status === 503 || error.status === 504);
 }
 
+function requestAbortError(): DOMException {
+  return new DOMException('Request aborted', 'AbortError');
+}
+
+async function fetchRawWithDeadline<TRaw, TNormalized>(config: ReliableLoadConfig<TRaw, TNormalized>, signal: AbortSignal): Promise<TRaw> {
+  const timeoutMs = Math.max(1, Math.min(60_000, config.requestTimeoutMs ?? 15_000));
+  if (signal.aborted) throw requestAbortError();
+
+  const controller = new AbortController();
+  let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+  let onParentAbort: (() => void) | null = null;
+
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      controller.abort();
+      reject(new ReliabilityError(`${config.provider.source.name} request timed out.`, { kind: 'network' }));
+    }, timeoutMs);
+  });
+  const parentAbort = new Promise<never>((_, reject) => {
+    onParentAbort = () => {
+      controller.abort();
+      reject(requestAbortError());
+    };
+    signal.addEventListener('abort', onParentAbort, { once: true });
+  });
+
+  try {
+    return await Promise.race([config.provider.fetchRaw(controller.signal), timeout, parentAbort]);
+  } finally {
+    if (timeoutHandle !== null) clearTimeout(timeoutHandle);
+    if (onParentAbort) signal.removeEventListener('abort', onParentAbort);
+  }
+}
+
 async function fetchValidated<TRaw, TNormalized>(config: ReliableLoadConfig<TRaw, TNormalized>, signal: AbortSignal): Promise<TNormalized> {
   const attempts = Math.max(1, Math.min(3, config.validationAttempts ?? 3));
   let lastError: ReliabilityError | null = null;
@@ -88,7 +123,7 @@ async function fetchValidated<TRaw, TNormalized>(config: ReliableLoadConfig<TRaw
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     if (signal.aborted) throw new DOMException('Request aborted', 'AbortError');
     try {
-      const raw = await config.provider.fetchRaw(signal);
+      const raw = await fetchRawWithDeadline(config, signal);
       const data = config.provider.normalize(raw);
       let valid = false;
       try { valid = config.provider.validate(data); } catch { valid = false; }
