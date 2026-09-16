@@ -5,9 +5,9 @@ import { RequestCoordinator } from '../../core/data/reliability';
 import type { NaturalEventFeed } from '../../features/natural-events/types';
 import { EonetProvider } from './EonetProvider';
 
-const CACHE_KEY = 'eonet:natural-events:v2';
-const CACHE_SCHEMA_VERSION = 2;
-const PROVIDER_VERSION = 'eonet-v3-events-v2-reliable';
+const CACHE_KEY = 'eonet:natural-events:v1';
+const CACHE_SCHEMA_VERSION = 1;
+const PROVIDER_VERSION = 'eonet-v3-events-v1';
 
 export interface NaturalEventLoadOptions extends ReliableLoadOptions {}
 
