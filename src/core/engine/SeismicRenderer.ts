@@ -20,6 +20,7 @@ interface PulseObject {
 const SURFACE_ALTITUDE = 0.006;
 const MAX_PULSES = 14;
 const UP = new THREE.Vector3(0, 0, 1);
+const SIGNAL_WHITE = new THREE.Color('#ffffff');
 
 function magnitudeColor(magnitude: number): THREE.Color {
   if (magnitude >= 6) return new THREE.Color('#ff3d6e');
@@ -113,6 +114,7 @@ export class SeismicRenderer implements SceneRenderer {
   }
 
   setEarthquakes(earthquakes: EarthquakeRecord[]): void {
+    this.#hoveredInstance = null;
     this.#earthquakes = earthquakes;
     this.#rebuild();
   }
@@ -133,6 +135,7 @@ export class SeismicRenderer implements SceneRenderer {
       this.#onHover?.(null);
       if (this.#context?.renderer.domElement.style.cursor === 'pointer') this.#context.renderer.domElement.style.cursor = '';
     }
+    this.#updateInstanceMatrices();
   }
 
   setSelected(id: EntityId | null): void {
@@ -158,6 +161,7 @@ export class SeismicRenderer implements SceneRenderer {
 
   #rebuild(): void {
     if (!this.#context || !this.#quality) return;
+    this.#hoveredInstance = null;
     this.#disposeMesh();
     this.#disposePulses();
 
@@ -200,15 +204,19 @@ export class SeismicRenderer implements SceneRenderer {
       const earthquake = this.#rendered[index]!;
       const point = globe.getCoords(earthquake.coordinates.lat, earthquake.coordinates.lon, SURFACE_ALTITUDE);
       const selected = earthquake.id === this.#selectedId;
+      const hovered = index === this.#hoveredInstance && !selected;
       const occurred = earthquake.time <= this.#simulationTime;
-      const scale = occurred ? markerScale(earthquake.magnitude) * (selected ? 1.65 : 1) : 0.000001;
+      const emphasis = selected ? 1.65 : hovered ? 1.22 : 1;
+      const scale = occurred ? markerScale(earthquake.magnitude) * emphasis : 0.000001;
 
       this.#dummy.position.set(point.x, point.y, point.z);
       this.#dummy.scale.setScalar(scale);
       this.#dummy.rotation.set(0, 0, 0);
       this.#dummy.updateMatrix();
       this.#mesh.setMatrixAt(index, this.#dummy.matrix);
-      this.#mesh.setColorAt(index, selected ? new THREE.Color('#ffffff') : magnitudeColor(earthquake.magnitude));
+      const color = magnitudeColor(earthquake.magnitude);
+      if (hovered) color.lerp(SIGNAL_WHITE, 0.28);
+      this.#mesh.setColorAt(index, selected ? SIGNAL_WHITE : color);
     }
     this.#mesh.instanceMatrix.needsUpdate = true;
     if (this.#mesh.instanceColor) this.#mesh.instanceColor.needsUpdate = true;
@@ -304,6 +312,8 @@ export class SeismicRenderer implements SceneRenderer {
     if (!earthquake) return;
     event.preventDefault();
     event.stopImmediatePropagation();
+    this.#hoveredInstance = null;
+    this.#updateInstanceMatrices();
     this.#onHover?.(null);
     this.#onSelect?.(earthquake);
   };
@@ -313,6 +323,7 @@ export class SeismicRenderer implements SceneRenderer {
     const instanceId = this.#raycast(event);
     if (instanceId === this.#hoveredInstance) return;
     this.#hoveredInstance = instanceId;
+    this.#updateInstanceMatrices();
     this.#context.renderer.domElement.style.cursor = instanceId === null ? '' : 'pointer';
     const earthquake = instanceId === null ? null : this.#rendered[instanceId] ?? null;
     if (earthquake) this.#onHover?.(earthquake, { x: event.clientX, y: event.clientY });
