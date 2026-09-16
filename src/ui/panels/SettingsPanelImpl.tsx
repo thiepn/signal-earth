@@ -6,6 +6,7 @@ import { assessPerformance } from '../../core/performance/certification';
 import type { GlobeViewportQuality } from '../../features/globe/GlobeViewport';
 import { SavedWorldsPanel } from '../../features/saved-worlds';
 import type { VisualMode } from '../../shared/types/layers';
+import { ProviderHealthPanel } from './ProviderHealthPanel';
 
 const VISUAL_MODES: Array<{ id: VisualMode; label: string; description: string; glyph: string }> = [
   { id: 'earth', label: 'Earth', description: 'Natural daylight', glyph: '◐' },
@@ -134,6 +135,8 @@ export function SettingsPanel(props: SettingsPanelProps) {
           <div><dt>DPR</dt><dd>{props.device.devicePixelRatio.toFixed(1)}×</dd></div>
         </dl>
       </section>
+
+      <ProviderHealthPanel online={props.online} />
 
       <section className="settings-section settings-section--saved-worlds">
         <div className="settings-section__heading">
