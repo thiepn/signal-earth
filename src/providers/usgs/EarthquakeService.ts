@@ -5,8 +5,8 @@ import { RequestCoordinator } from '../../core/data/reliability';
 import type { EarthquakeFeed, EarthquakeTimeWindow } from '../../features/seismic/types';
 import { UsgsEarthquakeProvider } from './UsgsEarthquakeProvider';
 
-const CACHE_SCHEMA_VERSION = 2;
-const PROVIDER_VERSION = 'usgs-feed-v2-reliable';
+const CACHE_SCHEMA_VERSION = 1;
+const PROVIDER_VERSION = 'usgs-feed-v1';
 
 function cacheKey(window: EarthquakeTimeWindow): string {
   return `usgs:earthquakes:${window}`;
