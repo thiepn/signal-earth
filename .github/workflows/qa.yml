@@ -20,22 +20,41 @@ concurrency:
 
 jobs:
   interaction-qa:
+    name: interaction-qa (${{ matrix.project }})
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: chromium-desktop
+            browser: chromium
+          - project: firefox-desktop
+            browser: firefox
+          - project: webkit-desktop
+            browser: webkit
+          - project: chromium-ultrawide
+            browser: chromium
+          - project: android-chromium
+            browser: chromium
+          - project: ios-webkit
+            browser: webkit
+          - project: tablet-webkit
+            browser: webkit
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: npm install --legacy-peer-deps --no-audit --no-fund
-      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
       - run: npm run build
-      - run: npm run qa:e2e:run
+      - run: npx playwright test --project=${{ matrix.project }}
       - name: Upload QA evidence on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: phase26-playwright-evidence
+          name: phase26-playwright-${{ matrix.project }}
           path: |
             playwright-report
             test-results
