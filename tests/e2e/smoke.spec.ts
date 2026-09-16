@@ -4,6 +4,27 @@ function isNarrow(page: Page): boolean {
   return (page.viewportSize()?.width ?? 10_000) <= 760;
 }
 
+test.beforeEach(async ({ page }, testInfo) => {
+  if (testInfo.project.name !== 'chromium-ultrawide') return;
+
+  // The hosted Linux Chromium runner renders WebGL through software. At a
+  // 2560×1080 viewport its synthetic CPU/memory hints can make Auto select the
+  // high profile, which asks SwiftShader to render the globe at 2× pixel ratio
+  // and starves unrelated UI events. Emulate a constrained desktop so Signal
+  // Earth exercises its real low-quality path while preserving the full
+  // ultrawide viewport and interaction suite.
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'hardwareConcurrency', {
+      configurable: true,
+      get: () => 2,
+    });
+    Object.defineProperty(navigator, 'deviceMemory', {
+      configurable: true,
+      get: () => 2,
+    });
+  });
+});
+
 function collectPageErrors(page: Page): string[] {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
