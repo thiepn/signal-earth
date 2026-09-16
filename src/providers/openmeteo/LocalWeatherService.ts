@@ -5,11 +5,11 @@ import { RequestCoordinator } from '../../core/data/reliability';
 import type { LocalWeather } from '../../features/above-me/types';
 import { OpenMeteoProvider } from './OpenMeteoProvider';
 
-const CACHE_SCHEMA_VERSION = 2;
-const PROVIDER_VERSION = 'open-meteo-current-v2-reliable';
+const CACHE_SCHEMA_VERSION = 1;
+const PROVIDER_VERSION = 'open-meteo-current-v1';
 
 function cacheKey(lat: number, lon: number): string {
-  return `openmeteo:current:${lat.toFixed(2)},${lon.toFixed(2)}:v2`;
+  return `openmeteo:current:${lat.toFixed(2)},${lon.toFixed(2)}:v1`;
 }
 
 export interface LocalWeatherLoadOptions extends ReliableLoadOptions {}
