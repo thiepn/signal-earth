@@ -6,35 +6,55 @@ Signal Earth is a static, browser-first observatory for Earth events, atmosphere
 
 ## Current status
 
-**Signal Earth v1.13.0 — Phase 28 Visual & Motion Finish** is production-built and release-certified for GitHub Pages.
+**Signal Earth 2.0.0-rc.1 — Phase 29 Release Hardening** is production-built and release-candidate certified for GitHub Pages.
 
 Live deployment: **https://thiepn.dev/signal-earth/**
 
-The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Time 2.0 replay, Observatory UX 2.0, deterministic Signal Intelligence, Above Me 2.0, Orbit 2.0, Dynamic Briefings 2.0, Saved Worlds, shareable views, capture/recording, PWA/offline-shell support, progressive loading, cross-browser interaction hardening, Data Reliability 2.0, and the final Visual & Motion Finish presentation layer.
+The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Time 2.0 replay, Observatory UX 2.0, deterministic Signal Intelligence, Above Me 2.0, Orbit 2.0, Dynamic Briefings 2.0, Saved Worlds, shareable views, capture/recording, PWA/offline-shell support, progressive loading, cross-browser interaction hardening, Data Reliability 2.0, the Visual & Motion Finish presentation layer, and the Phase 29 release-candidate hardening system.
+
+The final **2.0.0** production promotion is intentionally reserved for Phase 30.
+
+## Release Hardening
+
+Phase 29 converts the completed product into a reproducible and auditable release candidate rather than adding new features.
+
+- `package-lock.json`, `.nvmrc`, `npm@10.9.8` metadata and `npm ci` make CI dependency resolution reproducible.
+- Node is pinned to **22.23.2** for release workflows.
+- GitHub Actions used by verification, browser QA and deployment are pinned to immutable full commit SHAs rather than movable major tags.
+- Every production build writes `release.json` with the Signal Earth version and exact Git commit SHA.
+- Package version, in-app version, release metadata and the generated service-worker cache namespace are verified against one another.
+- The service worker now uses a release-specific cache namespace instead of the obsolete `signal-earth-v1.0.0` namespace.
+- A new worker no longer forces `skipWaiting()` during install, preventing a newly deployed worker from taking over an old open page before that page reloads.
+- Runtime service-worker cache writes are awaited, and obsolete Signal Earth caches are cleaned only when the replacement worker activates.
+- Production source maps are no longer deployed. The packaged site fell from roughly **14.02 MB** in Phase 28 to roughly **3.68 MB** without changing the application runtime architecture.
+- `release:verify` now audits the final package for required assets, PWA identity, GitHub-Pages-safe relative paths, release metadata, service-worker injection, startup-precache boundaries, source-map absence and an **8 MB** packaged-site ceiling.
+- `candidate:verify` audits version/lockfile/runtime/workflow/service-worker release invariants and is part of the normal `npm run release` gate.
+- Verification retains the exact certified `dist` artifact for 14 days with a SHA-256 digest instead of discarding the runner output after testing.
+- Production E2E coverage now verifies that `release.json`, the generated service-worker cache version and the version shown inside Display → Release tools agree.
+
+The certified Phase 29 implementation head passes **40/40** unit-test files, **151/151** unit tests and the complete **7/7** production browser/device-emulation matrix. Its startup JavaScript is approximately **441.6 kB raw / 141.1 kB gzip**, with **27** startup-shell precache entries and approximately **3.68 MB** total packaged output.
 
 ## Visual & Motion Finish
 
 Phase 28 closes the existing design system rather than redesigning Signal Earth.
 
-- Typography, spacing, borders, shadows, glass surfaces and focus treatment now share one final visual-token layer instead of drifting between older and newer feature CSS.
-- The top bar, panels, Search, bottom sheets, hover previews, settings/reliability cards and toasts now read as one observatory interface.
+- Typography, spacing, borders, shadows, glass surfaces and focus treatment share one final visual-token layer instead of drifting between older and newer feature CSS.
+- The top bar, panels, Search, bottom sheets, hover previews, settings/reliability cards and toasts read as one observatory interface.
 - A restrained ambient grid/atmosphere treatment adds depth behind the globe without introducing decorative imagery or a new theme.
 - Top bar, panels, timeline, Search, sheets, hover previews and toasts use one fast/standard/slow motion system with consistent easing.
-- Responsive animation preserves the existing positioned layout; the 761–900 px timeline keeps its right-aligned geometry instead of being recentered by transform animation.
+- Responsive animation preserves positioned layout; the 761–900 px timeline keeps its right-aligned geometry instead of being recentered by animation transforms.
 - Empty/loading/error states have stronger hierarchy and a compact observatory-style loading indicator.
 - Timeline track, thumb, active speed/preset controls and LIVE state receive clearer interaction feedback without changing Time 2.0 behavior.
-- Earthquake hover now lifts and brightens the existing instanced marker while selected earthquakes retain the stronger white/scale treatment. No extra marker geometry or draw-call class is introduced.
+- Earthquake hover lifts and brightens the existing instanced marker while selected earthquakes retain the stronger white/scale treatment. No extra marker geometry or draw-call class is introduced.
 - High-DPI hairlines and explicit high-contrast surfaces improve display clarity.
 - Decorative Phase 28 motion is removed in reduced-motion mode; existing global reduced-motion behavior and zero-duration automated camera transitions remain authoritative.
 - Mobile and compact-desktop density were refined without changing the established dock/bottom-sheet interaction model.
-
-The certified v1.13 build passes **40/40** unit-test files and **151/151** tests plus the complete seven-project production browser matrix. Startup JavaScript remains approximately **442.5 kB raw / 141.8 kB gzip**; final compiled CSS is approximately **101.62 kB raw / 19.07 kB gzip**.
 
 ## Data Reliability 2.0
 
 Phase 27 gives the existing provider stack one shared reliability contract instead of five independently drifting cache/network fallback implementations.
 
-- USGS, NASA EONET, CelesTrak, NOAA SWPC, and Open-Meteo service loads now pass through the same validated memory → IndexedDB → network → stale-fallback path.
+- USGS, NASA EONET, CelesTrak, NOAA SWPC, and Open-Meteo service loads pass through the same validated memory → IndexedDB → network → stale-fallback path.
 - Concurrent same-key loads are single-flight coordinated. One caller may abort without cancelling a still-needed request for another caller; the shared request is cancelled only when no consumers remain.
 - Transient failures use deterministic bounded retry/backoff. HTTP 408/425/429/500/502/503/504, network failures, malformed payloads and validation failures can be retried without unbounded loops or random jitter.
 - `Retry-After` is honored where response metadata is available, and rate limiting is classified separately from generic network or HTTP failures.
@@ -43,7 +63,7 @@ Phase 27 gives the existing provider stack one shared reliability contract inste
 - A corrupt or incompatible IndexedDB entry is deleted before it can be used as a fallback. Validator exceptions are treated as cache corruption rather than allowed to escape through the loading path.
 - Existing valid v1.11 provider cache keys and normalized snapshot schemas are preserved, so Phase 27 does not unnecessarily throw away offline data during upgrade.
 - Source timestamps are rejected when implausibly ahead of wall-clock time. CelesTrak receives a deliberately wider publication-skew allowance while retaining the existing ±24-hour propagation trust boundary and two-hour provider fetch policy.
-- Providers that already combine multiple upstream products retain deterministic partial-data behavior: one failing EONET/CelesTrak/SWPC sub-feed does not erase valid sibling data.
+- Providers that combine multiple upstream products retain deterministic partial-data behavior: one failing EONET/CelesTrak/SWPC sub-feed does not erase valid sibling data.
 - Display includes a live **Data reliability** surface for each external provider with LIVE/CACHED/STALE/PARTIAL/OFFLINE/ERROR state, source age, fetch age, network latency, fallback count and cache-recovery visibility.
 - The provider health layer is diagnostic only. It does not reinterpret scientific data or turn cached/derived state into “live” measurements.
 
@@ -52,9 +72,9 @@ Phase 27 gives the existing provider stack one shared reliability contract inste
 Phase 26 turns browser interaction reliability into a maintained release surface rather than a one-off manual check.
 
 - Playwright production-build coverage spans Chromium, Firefox, WebKit, ultrawide desktop, Android/Chromium, iPhone/WebKit, and iPad/WebKit profiles.
-- The interaction suite exercises startup/viewport containment, Search and keyboard navigation, primary panels, Time controls, Saved Worlds, reduced motion, provider failure isolation, offline reopening, phone orientation changes, and deferred-module failure recovery.
+- The interaction suite exercises startup/viewport containment, Search and keyboard navigation, primary panels, Time controls, Saved Worlds, reduced motion, provider failure isolation, offline reopening, phone orientation changes, deferred-module failure recovery, and Phase 29 packaged release identity.
 - Browser/device projects run on isolated CI runners so the WebGL observatory does not produce false failures from several concurrent globe renderers competing for one hosted-runner GPU/CPU budget.
-- Deferred Search, Display/Saved Worlds, Briefings, Above Me, Now, Inspector, and globe modules are wrapped in local error boundaries. A rejected optional chunk now leaves the observatory shell recoverable instead of taking down the React tree.
+- Deferred Search, Display/Saved Worlds, Briefings, Above Me, Now, Inspector, and globe modules are wrapped in local error boundaries. A rejected optional chunk leaves the observatory shell recoverable instead of taking down the React tree.
 - Natural Earth country-search indexing is single-flight cached: concurrent consumers share one request and one caller aborting does not cancel the shared load.
 - Globe material color transitions are hardened against transient/null Globe.gl material fields observed under WebKit, including the Earth → Night transition.
 - Mobile QA checks actual on-screen geometry and reachability rather than requiring a particular CSS positioning implementation.
@@ -68,17 +88,15 @@ Phase 25 changes how the observatory reaches the browser without changing its sc
 
 - The pre-Phase-25 production build shipped one main JavaScript bundle of roughly **2.47 MB minified / 709 KB gzip**.
 - The v1.10 release kept the HTML-linked startup JavaScript graph at approximately **435.5 KB raw / 138.7 KB gzip**.
-- Phase 28 remains inside the same startup budgets at approximately **442.5 KB raw / 141.8 KB gzip** HTML-linked JavaScript.
-- The remaining secondary code is distributed across **10 deferred JavaScript chunks** totaling roughly **2.02 MB raw**.
-- The Three.js / Globe.gl WebGL core remains a large, immediately requested async chunk (about **1.97 MB raw / 556 KB gzip**) because the globe is the primary product surface rather than an optional feature.
+- The Phase 29 release candidate remains inside the same startup budgets at approximately **441.6 KB raw / 141.1 KB gzip** HTML-linked/startup JavaScript.
+- The remaining secondary code is distributed across **10 deferred JavaScript chunks** totaling approximately **2.02 MB raw**.
+- The Three.js / Globe.gl WebGL core remains a large, immediately requested async chunk at approximately **1.97 MB raw / 556 KB gzip** because the globe is the primary product surface rather than an optional feature.
 - Search, Display/Settings + Saved Worlds, Dynamic Briefings launcher, Above Me UI, Signal Inspector/intelligence, Now UI, and selected-satellite orbit mechanics are loaded through explicit lazy boundaries.
 - Basic satellite hover information appears immediately; richer Orbit 2.0 mechanics are loaded only when satellite interaction requires them.
-- `OrbitWorkerClient` no longer creates the satellite worker just because the globe mounted. The worker starts on the first real catalog/propagation/observer request.
+- `OrbitWorkerClient` does not create the satellite worker just because the globe mounted. The worker starts on the first real catalog/propagation/observer request.
 - The service worker precaches the install/startup shell while lazy feature chunks and the orbit worker are cached on first use.
-- A dedicated `performance:verify` release gate enforces the startup-JavaScript budget and verifies that major lazy chunks and the orbit worker do not leak back into the startup precache.
-- GitHub Actions uses `--legacy-peer-deps` as a narrow workaround for the npm 10.9.8 Arborist peer-resolution crash observed on current hosted runners; application dependency versions are unchanged.
-
-The WebGL core is still large and the warning threshold is not hidden. Phase 25 keeps nonessential product systems out of the startup path and makes that architectural boundary testable.
+- A dedicated `performance:verify` release gate enforces the startup-JavaScript budget and verifies that major lazy chunks and the orbit worker do not leak back into startup precache.
+- Phase 29 additionally enforces the packaged-site ceiling and source-map policy without hiding Vite's large WebGL-core warning.
 
 ## Major systems
 
@@ -183,13 +201,15 @@ Saved Worlds stores up to 24 named browser-local observatory presets using the s
 - lazy chunks and workers use service-worker runtime cache after first use rather than startup precache
 - deferred UI failures are contained at feature boundaries rather than escalating to the whole React tree
 - Phase 28 presentation polish does not alter scientific semantics or persistence architecture
-- `npm run release` includes startup-architecture performance regression checks
-- the cross-browser QA workflow validates production-build interactions independently from the unit/release gate
+- Phase 29 release hardening does not alter product/scientific/storage semantics
+- release builds carry deterministic version/commit metadata and release-specific service-worker cache identity
+- `npm run release` includes type/unit/build, package, performance and release-candidate integrity gates
+- the cross-browser QA workflow validates production-build interactions independently from the release gate
 
 ## Development
 
 ```bash
-npm install --legacy-peer-deps
+npm ci --legacy-peer-deps
 npm run dev
 ```
 
@@ -213,6 +233,7 @@ npm test
 npm run build
 npm run release:verify
 npm run performance:verify
+npm run candidate:verify
 ```
 
 ## Earth assets
@@ -234,3 +255,4 @@ Core documents live under [`docs/`](docs/). Phase acceptance records are maintai
 - [`docs/PHASE-26-ACCEPTANCE.md`](docs/PHASE-26-ACCEPTANCE.md) — Real-World QA & Interaction Hardening
 - [`docs/PHASE-27-ACCEPTANCE.md`](docs/PHASE-27-ACCEPTANCE.md) — Data Reliability 2.0
 - [`docs/PHASE-28-ACCEPTANCE.md`](docs/PHASE-28-ACCEPTANCE.md) — Visual & Motion Finish
+- [`docs/PHASE-29-ACCEPTANCE.md`](docs/PHASE-29-ACCEPTANCE.md) — Release Hardening / 2.0 release-candidate certification
