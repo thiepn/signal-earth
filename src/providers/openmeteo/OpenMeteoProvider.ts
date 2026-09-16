@@ -1,4 +1,5 @@
 import type { ProviderAdapter } from '../../core/data/ProviderAdapter';
+import { fetchJsonReliable } from '../../core/data/reliability';
 import { SOURCE_REGISTRY } from '../../core/data/sourceRegistry';
 import type { LocalWeather } from '../../features/above-me/types';
 import type { OpenMeteoRaw } from './types';
@@ -42,13 +43,13 @@ export class OpenMeteoProvider implements ProviderAdapter<OpenMeteoRaw, LocalWea
       wind_speed_unit: 'kmh',
       precipitation_unit: 'mm',
     });
-    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`, {
+    return fetchJsonReliable<OpenMeteoRaw>(`https://api.open-meteo.com/v1/forecast?${params.toString()}`, {
       ...(signal ? { signal } : {}),
+      label: 'Open-Meteo current weather',
       headers: { Accept: 'application/json' },
       cache: 'no-cache',
+      maxResponseBytes: 2 * 1024 * 1024,
     });
-    if (!response.ok) throw new Error(`Open-Meteo request failed (${response.status}).`);
-    return await response.json() as OpenMeteoRaw;
   }
 
   normalize(raw: OpenMeteoRaw): LocalWeather {
