@@ -2,201 +2,167 @@
 
 **Watch the planet move.**
 
-Signal Earth is a static, browser-first observatory for Earth events, near-Earth orbit, space weather, and observer-relative context.
+Signal Earth is a static, browser-first observatory for Earth events, atmosphere, near-Earth orbit, space weather, time, and observer-relative context.
 
 ## Current status
 
-**Signal Earth v1.8.0 — Phase 23 Dynamic Briefings 2.0** is production-built and release-certified for GitHub Pages.
+**Signal Earth v1.10.0 — Phase 25 Performance Architecture 2.0** is production-built and release-certified for GitHub Pages.
 
 Live deployment: **https://thiepn.dev/signal-earth/**
 
-The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Dynamic Briefings 2.0, Orbit 2.0, Above Me 2.0 observer tools, shareable public views, PNG capture, optional 10-second recording, PWA/offline-shell support, Time 2.0 historical replay, Observatory UX 2.0, and deterministic Signal Intelligence.
+The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Time 2.0 replay, Observatory UX 2.0, deterministic Signal Intelligence, Above Me 2.0, Orbit 2.0, Dynamic Briefings 2.0, Saved Worlds, shareable views, capture/recording, PWA/offline-shell support, and the Phase 25 progressive-loading architecture.
 
-Time 2.0 exposes **24H / 7D / 30D** historical ranges while keeping future simulation capped at +24H. A guided **24H REPLAY** runs the previous day at 1000× and reconnects automatically to LIVE. Deep historical replay prioritizes observed Earth data; current CelesTrak OMM propagation is deliberately suppressed outside its certified ±24-hour window.
+## Performance Architecture 2.0
 
-Observatory UX 2.0 adds contextual one-layer-at-a-time controls, zoom-aware country/city labels and country borders, hover-before-click signal previews, a selection-driven desktop inspector, and directly accessible Search on mobile. These are presentation and interaction improvements; they do not change source semantics.
+Phase 25 changes how the observatory reaches the browser without changing its scientific/data semantics.
 
-Signal Intelligence adds a deterministic explanation layer beside raw provider fields. It derives earthquake impact cues from USGS fields, event duration and reported movement from NASA EONET geometry, orbital mechanics from CelesTrak OMM elements, and plain-language space-weather state from NOAA SWPC products. Every intelligence card exposes its derivation method and preserves the distinction between source measurements, provider flags, propagated values, forecasts, and local calculations.
+- The pre-Phase-25 production build shipped one main JavaScript bundle of roughly **2.47 MB minified / 709 KB gzip**.
+- The v1.10 release keeps the HTML-linked startup JavaScript graph at approximately **435.5 KB raw / 138.7 KB gzip**.
+- The remaining secondary code is distributed across **10 deferred JavaScript chunks** totaling roughly **2.01 MB raw**.
+- The Three.js / Globe.gl WebGL core remains a large, immediately requested async chunk (about **1.97 MB raw / 556 KB gzip**) because the globe is the primary product surface rather than an optional feature.
+- Search, Display/Settings + Saved Worlds, Dynamic Briefings launcher, Above Me UI, Signal Inspector/intelligence, Now UI, and selected-satellite orbit mechanics are loaded through explicit lazy boundaries.
+- Basic satellite hover information appears immediately; richer Orbit 2.0 mechanics are loaded only when satellite interaction requires them.
+- `OrbitWorkerClient` no longer creates the satellite worker just because the globe mounted. The worker starts on the first real catalog/propagation/observer request.
+- The service worker precaches only the install/startup shell. Lazy feature chunks and the orbit worker are cached on first use instead of being downloaded during service-worker installation.
+- A new `performance:verify` release gate enforces the startup-JavaScript budget and verifies that the major lazy chunks and orbit worker do not leak back into the startup precache.
+- GitHub Actions uses `--legacy-peer-deps` as a narrow workaround for an npm 10.9.8 Arborist peer-resolution crash observed on current hosted runners; application dependency versions are unchanged.
 
-Above Me 2.0 makes observer context first-class. It ranks ISS passes using local darkness, maximum elevation and satellite sunlight at culmination, surfaces rise/culmination/set geometry, improves Sun/Moon horizon context, summarizes current optical conditions, and keeps NOAA aurora context tied to model validity. Favorable pass geometry is explicitly not presented as guaranteed naked-eye visibility, and current weather is never projected into future passes.
+The goal is not to hide Vite's large-chunk warning. The WebGL core is still large. Phase 25 instead keeps nonessential product systems out of the startup path and makes that architectural boundary testable.
 
-Orbit 2.0 deepens selected-satellite exploration with mean-element perigee/apogee, orbital period and mean phase, LEO/MEO/GEO/HEO classification, deterministic constellation/program context, selected-time sunlight/shadow state, ascending/descending ground-track semantics, richer hover context, and stratified marker sampling for large catalogs.
+## Major systems
 
-Dynamic Briefings 2.0 composes source-grounded tours from the same provider/cache services used by the observatory. **Earth Right Now, Seismic Activity, Active Storms, Space Weather, Above Me, Orbit Highlights, and Last 24 Hours** refresh their inputs when the launcher opens, expose LIVE/CACHED/PARTIAL state, omit missing sections instead of fabricating replacements, and freeze the composed definition before playback. Planet in Motion and Night Earth remain curated tours. No generative model writes briefing narration.
+### Signal Earth Now
 
-Automated release certification runs TypeScript validation, unit tests, the production Vite build, service-worker precache generation, and post-build release verification before Pages deployment. Real interactive browser/device acceptance remains a separate manual check.
+A deterministic priority feed answers **“What matters right now?”** using USGS earthquakes, NASA EONET events, NOAA SWPC context, CelesTrak/ISS context, and observer information when available.
 
-## Current interaction model
+### Living Earth
+
+The Weather layer uses NASA EOSDIS/GIBS cloud optical thickness and optional IMERG precipitation with simulation-time-aware observation timestamps. Severe-storm tracks come from NASA EONET. Observed atmospheric imagery is not presented as forecast data.
+
+### Time 2.0
+
+- 24H / 7D / 30D historical ranges
+- +24H future simulation cap
+- 1× / 10× / 100× / 1000× playback
+- guided **24H REPLAY** that reconnects automatically to LIVE
+- observed Earth history can extend to 30 days
+- current CelesTrak OMM propagation is deliberately unavailable outside Signal Earth's certified ±24-hour orbit window
+
+### Observatory UX 2.0
+
+- contextual one-layer-at-a-time controls
+- zoom-aware country/city labels and borders
+- hover-before-click signal previews
+- selection-driven inspector
+- mobile bottom-sheet workflow and direct Search access
+
+### Signal Intelligence
+
+Selected signals preserve raw provider fields while adding deterministic derived context. No generative model writes event explanations. USGS flags remain flags, EONET motion uses source geometry, CelesTrak context remains propagated/derived, and NOAA products retain their individual operational/model semantics.
+
+### Above Me 2.0
+
+The local observatory includes Sun/Moon horizon geometry, current observing conditions, local aurora context, satellites above the observer, and ranked ISS opportunities. Favorable viewing geometry is not presented as guaranteed naked-eye visibility. Location remains ephemeral unless the user explicitly chooses **Remember this coordinate**.
+
+### Orbit 2.0
+
+Selected satellites expose locally derived period, mean-element perigee/apogee, mean phase, orbit class, constellation/program context, selected-time sunlight state, and ascending/descending motion. The selected ground track separates ascending and descending segments. Positions remain locally propagated CelesTrak OMM context.
+
+### Dynamic Briefings 2.0
+
+Data-driven briefings include Earth Right Now, Seismic Activity, Active Storms, Space Weather, Above Me, Orbit Highlights, and Last 24 Hours. Definitions are assembled deterministically from supported provider snapshots, expose LIVE/CACHED/PARTIAL state, omit unavailable sections, and freeze before playback. Planet in Motion and Night Earth remain curated tours.
+
+### Saved Worlds
+
+Saved Worlds stores up to 24 named browser-local observatory presets using the same canonical public state representation as share links. Views can be loaded, updated, copied, or deleted. Observer coordinates and accessibility preferences are intentionally excluded from Saved Worlds.
+
+## Interaction model
 
 ### Desktop
 
-- top bar: primary **Now** and **Search** actions, compact time state, then secondary Brief / Here / Display tools
-- Brief opens Dynamic Briefings 2.0, refreshes supported public provider snapshots through their existing cache policies, and labels each briefing LIVE DATA / CACHED / PARTIAL / UNAVAILABLE / CURATED before playback
-- left: five primary layers, with only the selected layer’s detailed controls expanded; Orbit explains LEO/MEO/GEO/HEO classes and ASC/DESC ground-track semantics
-- right: selected-object inspector appears only when an object is selected and separates raw source data from derived intelligence; selected satellites expose Orbit 2.0 mechanics and sunlight state
-- bottom: Time 2.0 timeline with 24H / 7D / 30D replay ranges and a +24H future cap
-- globe: zoom-aware country/city context and country borders; hover signals for a compact preview, click to inspect, or click Earth to create a surface target
-- orbit: selected orbit path plus solid ascending and dashed descending ground-track segments, Follow/Orbit View cameras, and temporal trails
-- Above Me: local observer summary, horizon sky, ranked ISS passes, current observing conditions and aurora context
-
-### Timeline
-
-- choose a **24H**, **7D**, or **30D** historical range
-- future simulation remains capped at **+24H**
-- range-aware presets and scrub precision
-- playback: 1×, 10×, 100×, 1000×
-- **24H REPLAY** plays the previous day at 1000× and stops automatically at LIVE
-- visible earthquake/event counts update with simulation time
-- deep replay uses observed Earth history; Orbit is explicitly unavailable beyond ±24H
-- seeking pauses at the chosen timestamp; LIVE explicitly reconnects to wall time
+- top: **Now**, **Search**, time state, Brief, Here, Display
+- left: Weather / Earthquakes / Natural Events / Orbit / Aurora
+- right: inspector appears when a signal is selected
+- bottom: Time 2.0 timeline
+- globe: drag, zoom, hover signals, click signals or Earth locations
+- Display contains rendering/accessibility/release tools and Saved Worlds
 
 ### Mobile
 
-- compact top bar with direct Search access
-- persistent bottom dock for **Now / Layers / Here / Time / Inspect**
-- one bottom sheet at a time; selecting a globe signal opens Inspect automatically
-- intelligence cards use the same source/derived distinction as desktop
-- selected satellites expose the same Orbit 2.0 mechanics as desktop in compact form
-- the Time sheet exposes the same timeline state and controls as desktop
-- Above Me 2.0 is available from the Here dock; location permission is requested only after explicit opt-in
-- Dynamic Briefings 2.0 uses the same frozen definitions and source-state labels as desktop
+- compact top bar with Search
+- persistent **Now / Layers / Here / Time / Inspect** dock
+- one bottom sheet at a time
+- the same intelligence, observer, timeline, briefing and Saved Worlds semantics as desktop
 
 ### Keyboard
 
-- `/` — unified search + deterministic command palette
-- `B` — open planetary briefings
-- `Space` — play/pause simulation clock
+- `/` — Search + deterministic command palette
+- `B` — briefings
+- `N` — Signal Earth Now
+- `Space` — play/pause time
 - `R` — reset globe
-- `Esc` — close transient UI
+- `Esc` — close transient UI / cancel briefing
 - `1` / `2` / `3` / `4` — Earth / Signal / Night / Wireframe
 
-Briefing commands include `earth now`, `seismic briefing`, `active storms briefing`, `space weather briefing`, `above me briefing`, `orbit highlights`, and `last 24h briefing`. The bare `last 24 hours` command remains the Time 2.0 replay command.
+## Architecture and trust constraints
 
-## Architecture constraints
-
-- static GitHub Pages deployment
-- no runtime backend
-- React/TypeScript for low-frequency UI state
-- Three.js + Globe.gl for rendering
-- presentation-only Natural Earth borders and zoom-aware geographic labels are isolated in a dedicated renderer and can fail without affecting signal layers
-- hover previews originate from renderer callbacks and are presented through a lightweight UI bridge; high-frequency render data remains outside React app state
-- Signal Intelligence rules are pure deterministic functions over already-loaded provider records; no generative model or hidden remote enrichment is used
-- intelligence cards expose their methodology and never replace raw source fields
-- provider flags remain flags: for example, the USGS tsunami field is never rewritten as a claim that a tsunami occurred
-- NASA EONET movement calculations use only geometry reports applicable at the selected simulation time
-- CelesTrak orbital period, inclination and eccentricity are derived from OMM fields; displayed spacecraft positions remain locally propagated rather than measured live positions
-- Orbit 2.0 selected mechanics are derived locally from loaded CelesTrak OMM fields plus selected-time satellite.js propagation; no additional orbit provider is introduced
-- Orbit 2.0 perigee/apogee and mean phase are mean-element context, not precision orbit determination
-- selected satellite sunlight/penumbra/umbra state is derived from the selected-time propagated ECI position and Earth-shadow geometry
-- quality-capped orbit rendering uses stratified catalog sampling and always preserves the selected satellite when possible
-- selected ground-track direction is rendered as solid ascending and dashed descending segments; this is motion direction only and does not represent sensor swath or communications footprint
-- current-only NOAA scales and solar-wind observations are never backfilled into unrelated replay/future time
-- renderer state stays behind `GlobeViewportHandle`
-- one ActionBus for application-state actions
-- one central `TimeEngine`
-- global simulation window supports 30 days of historical replay and 24 hours of future simulation
-- observed / propagated / forecast semantics remain distinct
-- high-frequency simulation/renderer data bypasses React app state
-- satellite propagation runs in a dedicated ES-module Web Worker via satellite.js
-- speed-aware predictive ephemeris windows drive render-time orbit interpolation
-- large timeline seeks invalidate stale orbital prediction state
-- CelesTrak OMM catalogs obey a hard two-hour minimum fetch interval
-- orbit markers use quality-capped Three.js instancing
-- selected orbit paths and temporal trails are generated on demand in the orbit worker
-- true altitude is default; visual scale is explicitly labelled and factor-aware
-- satellite follow/orbit cameras remain owned by CameraController/GlobeEngine
-- IndexedDB-backed provider snapshots
-- USGS feed auto-refresh with stale-cache fallback
-- NASA EONET v3 adapter with 15-minute client TTL and 24-hour stale fallback
-- EONET event geometry is timeline-aware but never extrapolated into invented future tracks
-- NOAA SWPC multi-product adapter with five-minute cache TTL and independent partial-feed degradation
-- Kp retains observed/estimated/predicted semantics; current solar-wind/scales never masquerade as replay data
-- OVATION aurora is validity-window constrained and rendered through a dedicated quality-bounded Three.js point field
-- observer location is ephemeral by default and only persisted after explicit opt-in
-- observer-relative satellite look angles and pass predictions remain inside the orbit worker
-- ISS pass culmination uses satellite.js solar position + Earth-shadow fraction to distinguish sunlit / penumbra / umbra geometry
-- favorable observer geometry combines local solar darkness, satellite illumination and pass elevation but never claims guaranteed apparent visibility
-- current Open-Meteo conditions use a 15-minute cache and are never backfilled into unrelated replay/future time or projected into future pass weather
-- local Sun/Moon/horizon geometry follows the same central TimeEngine
-- Phase 12 search is local-first and indexes only simulation-time-applicable observed events
-- command parsing is deterministic and compiles to existing app actions; no AI or remote geocoder is used
-- the Phase 13 TourEngine remains the sole briefing executor; Phase 23 changes briefing composition rather than adding another camera/tour runtime
-- Dynamic Briefings 2.0 refresh through existing USGS/EONET/CelesTrak/SWPC/Open-Meteo service/cache contracts and introduce no hidden enrichment provider
-- dynamic briefing definitions freeze before Play and do not rewrite narration during playback
-- partial provider failures omit unsupported sections and surface PARTIAL state instead of generating substitute facts
-- Above Me briefing composition never triggers browser geolocation; it uses only an explicitly remembered observer coordinate
-- Last 24 Hours is a source-timestamp recap, not a synthetic reconstruction of unobserved intermediate states
-- the tour engine is cancellable, supports step skipping, and snapshots/restores user state rather than leaving hidden mutations behind
-- manual OrbitControls input emits an explicit interruption signal so guided camera control yields immediately to the user
+- static GitHub Pages deployment; no runtime backend
+- React/TypeScript for low-frequency application/UI state
+- Three.js + Globe.gl for the Earth renderer
+- one central `TimeEngine` and one ActionBus
+- high-frequency renderer/propagation state stays outside React state
+- provider snapshots use IndexedDB caches with provider-specific freshness policies
+- USGS earthquakes remain observed data
+- NASA EONET geometry is time-aware and never extrapolated into invented tracks
+- NASA GIBS imagery is observation-time aware and is not treated as forecast data
+- NOAA Kp/scales/solar wind/OVATION keep their distinct semantics and validity rules
+- CelesTrak OMM positions are locally propagated, not measured live positions
+- Orbit remains scientifically bounded to the existing ±24-hour trust window
+- observer location persists only after explicit opt-in
+- current Open-Meteo conditions are not projected into future ISS-pass weather
+- deterministic search/commands; no remote AI/geocoder dependency
+- deterministic briefing composition; no generative narration
+- Saved Worlds stores public display state only and introduces no account/cloud backend
+- Phase 25 async chunks retain the same product/data trust boundaries as their pre-split implementations
+- lazy chunks and workers use service-worker runtime cache after first use rather than startup precache
+- `npm run release` now includes a startup-architecture performance regression gate
 
 ## Development
 
 ```bash
-npm install
+npm install --legacy-peer-deps
 npm run dev
 ```
 
-V1 release gate:
+Release gate:
 
 ```bash
 npm run release
 ```
 
-Individual verification commands remain available as `npm run typecheck`, `npm test`, `npm run build`, and `npm run release:verify`.
+Individual checks:
+
+```bash
+npm run typecheck
+npm test
+npm run build
+npm run release:verify
+npm run performance:verify
+```
 
 ## Earth assets
 
-The local Earth textures are stylized derivatives of public-domain Natural Earth low-resolution geometry. Surface variation is decorative geographic context, not measured elevation or land-cover data.
+Local Earth textures are stylized derivatives of public-domain Natural Earth low-resolution geometry. Surface variation is decorative geographic context, not measured elevation or land-cover data.
 
 ## Documentation
 
-- [`docs/PRODUCT.md`](docs/PRODUCT.md)
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- [`docs/DATA-SOURCES.md`](docs/DATA-SOURCES.md)
-- [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md)
-- [`docs/ROADMAP.md`](docs/ROADMAP.md)
-- [`docs/PHASE-0-ACCEPTANCE.md`](docs/PHASE-0-ACCEPTANCE.md)
-- [`docs/PHASE-1-ACCEPTANCE.md`](docs/PHASE-1-ACCEPTANCE.md)
-- [`docs/PHASE-2-ACCEPTANCE.md`](docs/PHASE-2-ACCEPTANCE.md)
-- [`docs/PHASE-3-ACCEPTANCE.md`](docs/PHASE-3-ACCEPTANCE.md)
-- [`docs/PHASE-4-ACCEPTANCE.md`](docs/PHASE-4-ACCEPTANCE.md)
-- [`docs/PHASE-5-ACCEPTANCE.md`](docs/PHASE-5-ACCEPTANCE.md)
-- [`docs/PHASE-6-ACCEPTANCE.md`](docs/PHASE-6-ACCEPTANCE.md)
-- [`docs/PHASE-7-ACCEPTANCE.md`](docs/PHASE-7-ACCEPTANCE.md)
-- [`docs/PHASE-8-ACCEPTANCE.md`](docs/PHASE-8-ACCEPTANCE.md)
-- [`docs/PHASE-9-ACCEPTANCE.md`](docs/PHASE-9-ACCEPTANCE.md)
-- [`docs/PHASE-10-ACCEPTANCE.md`](docs/PHASE-10-ACCEPTANCE.md)
-- [`docs/PHASE-11-ACCEPTANCE.md`](docs/PHASE-11-ACCEPTANCE.md)
-- [`docs/PHASE-12-ACCEPTANCE.md`](docs/PHASE-12-ACCEPTANCE.md)
-- [`docs/PHASE-13-ACCEPTANCE.md`](docs/PHASE-13-ACCEPTANCE.md)
-- [`docs/PHASE-14-ACCEPTANCE.md`](docs/PHASE-14-ACCEPTANCE.md)
-- [`docs/PHASE-15-ACCEPTANCE.md`](docs/PHASE-15-ACCEPTANCE.md)
-- [`docs/PHASE-16-ACCEPTANCE.md`](docs/PHASE-16-ACCEPTANCE.md)
-- [`docs/PHASE-17-ACCEPTANCE.md`](docs/PHASE-17-ACCEPTANCE.md)
-- [`docs/PHASE-18-ACCEPTANCE.md`](docs/PHASE-18-ACCEPTANCE.md)
-- [`docs/PHASE-19-ACCEPTANCE.md`](docs/PHASE-19-ACCEPTANCE.md)
-- [`docs/PHASE-20-ACCEPTANCE.md`](docs/PHASE-20-ACCEPTANCE.md)
-- [`docs/PHASE-21-ACCEPTANCE.md`](docs/PHASE-21-ACCEPTANCE.md)
-- [`docs/PHASE-22-ACCEPTANCE.md`](docs/PHASE-22-ACCEPTANCE.md)
-- [`docs/PHASE-23-ACCEPTANCE.md`](docs/PHASE-23-ACCEPTANCE.md)
-- [`docs/RELEASE-V1.md`](docs/RELEASE-V1.md)
+Core documents live under [`docs/`](docs/). Phase acceptance records are maintained as `docs/PHASE-<N>-ACCEPTANCE.md`, including:
 
-## Living Earth — v1.2
-
-Signal Earth includes a first-class Weather layer with NASA EOSDIS/GIBS VIIRS cloud optical thickness, optional GPM IMERG 30-minute precipitation, NASA EONET severe-storm tracks, simulation-time-aware observation requests, bounded recent fallback, and surfaced observation timestamps. Weather imagery is near-real-time observed context, not a forecast.
-
-## Signal Intelligence — v1.5
-
-Selected earthquakes, natural events and satellites include deterministic intelligence cards that explain the most relevant source-derived context while retaining the raw provider fields above them. The Aurora/Space Weather layer receives the same treatment for NOAA Kp, G/R/S scales, solar wind and OVATION validity. Derived text is explicitly labelled and includes its methodology; no AI-generated event claims are introduced.
-
-## Above Me 2.0 — v1.6
-
-The local observatory ranks ISS opportunities over the next 24 hours, shows rise/culmination/set geometry, evaluates sunlight vs Earth shadow at pass culmination, improves Sun/Moon horizon context, and summarizes current darkness/cloud conditions and aurora model context. Viewing labels describe geometry only; apparent brightness, local obstructions and future cloud cover remain outside the model.
-
-## Orbit 2.0 — v1.7
-
-Selected satellites expose local OMM-derived orbital mechanics including period, perigee/apogee, mean phase, orbit class, constellation/program context, selected-time sunlight state and ascending/descending motion. The selected ground track separates solid ascending from dashed descending segments, while large quality-capped catalogs use stratified sampling rather than first-record truncation. All positions remain locally propagated CelesTrak OMM context within Signal Earth’s existing certified ±24-hour orbit window.
-
-## Dynamic Briefings 2.0 — v1.8
-
-The briefing launcher now composes current tours from the observatory’s existing provider/cache services. Earth Right Now, Seismic Activity, Active Storms, Space Weather, Above Me, Orbit Highlights and Last 24 Hours use deterministic snapshot-derived counts, names and statuses, expose their data state before playback, and omit unavailable sections rather than inventing replacements. Above Me is only personalized from a coordinate the user explicitly chose to remember. Planet in Motion and Night Earth remain curated cinematic tours.
+- [`docs/PHASE-18-ACCEPTANCE.md`](docs/PHASE-18-ACCEPTANCE.md) — Time 2.0
+- [`docs/PHASE-19-ACCEPTANCE.md`](docs/PHASE-19-ACCEPTANCE.md) — Observatory UX 2.0
+- [`docs/PHASE-20-ACCEPTANCE.md`](docs/PHASE-20-ACCEPTANCE.md) — Signal Intelligence
+- [`docs/PHASE-21-ACCEPTANCE.md`](docs/PHASE-21-ACCEPTANCE.md) — Above Me 2.0
+- [`docs/PHASE-22-ACCEPTANCE.md`](docs/PHASE-22-ACCEPTANCE.md) — Orbit 2.0
+- [`docs/PHASE-23-ACCEPTANCE.md`](docs/PHASE-23-ACCEPTANCE.md) — Dynamic Briefings 2.0
+- [`docs/PHASE-24-ACCEPTANCE.md`](docs/PHASE-24-ACCEPTANCE.md) — Saved Worlds
+- [`docs/PHASE-25-ACCEPTANCE.md`](docs/PHASE-25-ACCEPTANCE.md) — Performance Architecture 2.0
