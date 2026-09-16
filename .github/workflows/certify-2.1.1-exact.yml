@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ea07d3ad3fe1ad24f43665c94030e05381e8c89a
+          ref: 689e119a4c0f0a2a5afb0865f7289665db9ef2d1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version-file: .nvmrc
@@ -25,7 +25,7 @@ jobs:
       - run: npm ci --legacy-peer-deps --no-audit --no-fund
       - run: npm run release
       - name: Confirm exact source
-        run: test "$(git rev-parse HEAD)" = "ea07d3ad3fe1ad24f43665c94030e05381e8c89a"
+        run: test "$(git rev-parse HEAD)" = "689e119a4c0f0a2a5afb0865f7289665db9ef2d1"
 
   interaction-exact-source:
     name: exact-source (${{ matrix.project }})
@@ -52,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ea07d3ad3fe1ad24f43665c94030e05381e8c89a
+          ref: 689e119a4c0f0a2a5afb0865f7289665db9ef2d1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version-file: .nvmrc
@@ -63,4 +63,4 @@ jobs:
       - run: npx playwright test --project=${{ matrix.project }}
       - name: Confirm exact source
         if: always()
-        run: test "$(git rev-parse HEAD)" = "ea07d3ad3fe1ad24f43665c94030e05381e8c89a"
+        run: test "$(git rev-parse HEAD)" = "689e119a4c0f0a2a5afb0865f7289665db9ef2d1"
