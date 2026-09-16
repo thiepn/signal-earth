@@ -170,8 +170,15 @@ One shared reliability contract for USGS, NASA EONET, CelesTrak, NOAA SWPC and O
 
 Phase 27 preserves existing normalized cache schemas and provider trust semantics. It does not introduce a backend, telemetry service, cloud account system, generative interpretation layer, new scientific provider or new primary globe layer.
 
+## Phase 28 — Visual & Motion Finish
+
+Status: **implemented and certified**.
+
+Final design-system closure without a redesign: unified typography and spacing hierarchy, refined observatory surfaces, shared motion/easing tokens, panel/Search/sheet/timeline/toast transitions, improved loading and empty states, clearer focus/hover/selection treatment, earthquake marker hover emphasis, responsive-density corrections, high-DPI hairlines, stronger high-contrast presentation and explicit reduced-motion polish.
+
+Phase 28 is deliberately presentation-only. It does not change data providers, scientific semantics, storage schemas, product workflows or startup JavaScript architecture.
+
 ## Next planned phases
 
-- **Phase 28 — Visual & Motion Finish:** final visual hierarchy, motion language and graphics polish without reopening the product architecture.
 - **Phase 29 — Release Hardening:** comprehensive final audit, defect closure, packaging and release-candidate certification.
 - **Phase 30 — Signal Earth 2.0:** final production promotion and release closure.
