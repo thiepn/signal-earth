@@ -4,15 +4,15 @@ function isNarrow(page: Page): boolean {
   return (page.viewportSize()?.width ?? 10_000) <= 760;
 }
 
-test.beforeEach(async ({ page }, testInfo) => {
-  if (testInfo.project.name !== 'chromium-ultrawide') return;
+test.beforeEach(async ({ page, browserName }) => {
+  if (browserName !== 'chromium') return;
 
-  // The hosted Linux Chromium runner renders WebGL through software. At a
-  // 2560×1080 viewport its synthetic CPU/memory hints can make Auto select the
-  // high profile, which asks SwiftShader to render the globe at 2× pixel ratio
-  // and starves unrelated UI events. Emulate a constrained desktop so Signal
-  // Earth exercises its real low-quality path while preserving the full
-  // ultrawide viewport and interaction suite.
+  // Hosted Linux Chromium renders Signal Earth's WebGL scene through software
+  // (SwiftShader). Synthetic high-end CPU/memory hints can therefore select a
+  // quality profile the runner cannot render responsively. Constrain only those
+  // hardware hints so the product exercises its real Auto/low-quality path;
+  // viewport, device emulation, UI, providers and interaction coverage remain
+  // unchanged.
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'hardwareConcurrency', {
       configurable: true,
