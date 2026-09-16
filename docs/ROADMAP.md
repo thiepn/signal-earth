@@ -86,19 +86,92 @@ Cancellable declarative tour engine, reversible session snapshots, cinematic cam
 
 ## Phase 14 — Device, Performance & Accessibility Certification
 
-Status: **implemented; production browser/device execution pending a successful dependency build**.
+Status: **implemented and certified**.
 
 Reduced-motion/high-contrast behavior, keyboard/focus hardening, coarse-pointer targets, device-tier performance budgets, adaptive-quality hysteresis/recovery, P95/long-frame metrics, WebGL lifecycle recovery, visibility-aware background scheduling and formal device/browser certification protocol.
 
 ## Phase 15 — V1 Release
 
-Status: **implemented at source/release-contract level; production build/browser execution pending successful dependency installation.**
+Status: **implemented and shipped**.
 
 Human-readable share URLs, PNG capture, optional browser recording, installable PWA metadata, generated offline precache, deterministic release commands, production bundle verification, GitHub Pages release workflow and final V1 release audit.
-
 
 ## Phase 16 — Signal Earth Now
 
 Status: **implemented**.
 
 First-class live discovery feed ranked from loaded USGS, NASA EONET, NOAA SWPC, CelesTrak and local-observer context; one-click focus into existing globe interactions; automatic lazy loading while the Now surface is open; mobile/desktop Now navigation; nearby-city geographic context; richer earthquake, natural-event and satellite inspector explanations; deterministic ranking and geography tests.
+
+## Phase 17 — Living Earth
+
+Status: **implemented**.
+
+Observation-time-aware atmospheric presentation using NASA GIBS cloud imagery, optional precipitation context, severe-storm tracks, Earth texture improvements and clearer observed-versus-forecast semantics.
+
+## Phase 18 — Time 2.0
+
+Status: **implemented**.
+
+Extended 24H/7D/30D historical ranges, bounded +24H future simulation, accelerated playback, guided 24H replay and stronger cross-layer simulation-time semantics.
+
+## Phase 19 — Observatory UX 2.0
+
+Status: **implemented**.
+
+Contextual layer controls, zoom-aware geographic context, hover-before-click previews, selection-driven inspector behavior and refined mobile bottom-sheet workflows.
+
+## Phase 20 — Signal Intelligence
+
+Status: **implemented**.
+
+Deterministic derived context for selected signals while keeping provider facts, source flags and derived interpretations clearly separated.
+
+## Phase 21 — Above Me 2.0
+
+Status: **implemented**.
+
+Improved local sky/horizon presentation, observer astronomy, weather context, local aurora context, satellites above the observer and ranked ISS opportunities with explicit visibility caveats.
+
+## Phase 22 — Orbit 2.0
+
+Status: **implemented**.
+
+Richer selected-satellite mechanics, orbit class/program context, sunlight state, ascending/descending motion, improved ground tracks and interaction controls while retaining the ±24-hour trust window.
+
+## Phase 23 — Dynamic Briefings 2.0
+
+Status: **implemented**.
+
+Provider-driven deterministic briefings with LIVE/CACHED/PARTIAL source state, frozen playback definitions, unavailable-section omission and curated cinematic tours retained where appropriate.
+
+## Phase 24 — Saved Worlds
+
+Status: **implemented**.
+
+Up to 24 named browser-local observatory presets built on the canonical public state representation, with load/update/copy/delete behavior and privacy-sensitive state deliberately excluded.
+
+## Phase 25 — Performance Architecture 2.0
+
+Status: **implemented and certified**.
+
+Demand-loaded secondary UI, lazy globe boundary, deferred Orbit worker startup, smaller startup service-worker precache and enforceable startup-JavaScript performance budgets.
+
+## Phase 26 — Real-World QA & Interaction Hardening
+
+Status: **implemented, certified and shipped**.
+
+Seven-project Playwright production matrix across Chromium/Firefox/WebKit plus desktop/mobile/tablet/ultrawide profiles; provider failure and offline reopening scenarios; lazy-module containment; WebKit renderer hardening; mobile geometry/orientation checks; and permanent cross-browser regression coverage.
+
+## Phase 27 — Data Reliability 2.0
+
+Status: **implemented on `phase27-data-reliability`; release certification in progress**.
+
+One shared reliability contract for USGS, NASA EONET, CelesTrak, NOAA SWPC and Open-Meteo: validated memory/IndexedDB/network/stale fallback flow, request coalescing with independent caller cancellation, bounded deterministic retry/backoff, rate-limit classification, offline short-circuiting, corrupt-cache recovery, source-timestamp auditing, partial-provider preservation, live provider-health diagnostics and dedicated reliability regression tests.
+
+Phase 27 preserves existing normalized cache schemas and provider trust semantics. It does not introduce a backend, telemetry service, cloud account system, generative interpretation layer, new scientific provider or new primary globe layer.
+
+## Next planned phases
+
+- **Phase 28 — Visual & Motion Finish:** final visual hierarchy, motion language and graphics polish without reopening the product architecture.
+- **Phase 29 — Release Hardening:** comprehensive final audit, defect closure, packaging and release-candidate certification.
+- **Phase 30 — Signal Earth 2.0:** final production promotion and release closure.
