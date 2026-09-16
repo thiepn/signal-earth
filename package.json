@@ -1,7 +1,7 @@
 {
   "name": "signal-earth",
   "private": true,
-  "version": "2.0.0-rc.1",
+  "version": "2.0.0",
   "type": "module",
   "description": "A time-aware browser observatory for Earth, orbit, space weather, and the observer.",
   "packageManager": "npm@10.9.8",
@@ -17,8 +17,8 @@
     "certify": "npm run typecheck && npm test && npm run build",
     "release:verify": "node scripts/release-verify.mjs",
     "performance:verify": "node scripts/performance-verify.mjs",
-    "candidate:verify": "node scripts/candidate-verify.mjs",
-    "release": "npm run certify && npm run release:verify && npm run performance:verify && npm run candidate:verify"
+    "release:integrity": "node scripts/release-integrity.mjs",
+    "release": "npm run certify && npm run release:verify && npm run performance:verify && npm run release:integrity"
   },
   "dependencies": {
     "globe.gl": "2.46.2",
