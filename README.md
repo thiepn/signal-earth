@@ -6,11 +6,29 @@ Signal Earth is a static, browser-first observatory for Earth events, atmosphere
 
 ## Current status
 
-**Signal Earth v1.12.0 — Phase 27 Data Reliability 2.0** is production-built and release-certified for GitHub Pages.
+**Signal Earth v1.13.0 — Phase 28 Visual & Motion Finish** is production-built and release-certified for GitHub Pages.
 
 Live deployment: **https://thiepn.dev/signal-earth/**
 
-The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Time 2.0 replay, Observatory UX 2.0, deterministic Signal Intelligence, Above Me 2.0, Orbit 2.0, Dynamic Briefings 2.0, Saved Worlds, shareable views, capture/recording, PWA/offline-shell support, progressive loading, cross-browser interaction hardening, and the Data Reliability 2.0 provider-resilience layer.
+The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Time 2.0 replay, Observatory UX 2.0, deterministic Signal Intelligence, Above Me 2.0, Orbit 2.0, Dynamic Briefings 2.0, Saved Worlds, shareable views, capture/recording, PWA/offline-shell support, progressive loading, cross-browser interaction hardening, Data Reliability 2.0, and the final Visual & Motion Finish presentation layer.
+
+## Visual & Motion Finish
+
+Phase 28 closes the existing design system rather than redesigning Signal Earth.
+
+- Typography, spacing, borders, shadows, glass surfaces and focus treatment now share one final visual-token layer instead of drifting between older and newer feature CSS.
+- The top bar, panels, Search, bottom sheets, hover previews, settings/reliability cards and toasts now read as one observatory interface.
+- A restrained ambient grid/atmosphere treatment adds depth behind the globe without introducing decorative imagery or a new theme.
+- Top bar, panels, timeline, Search, sheets, hover previews and toasts use one fast/standard/slow motion system with consistent easing.
+- Responsive animation preserves the existing positioned layout; the 761–900 px timeline keeps its right-aligned geometry instead of being recentered by transform animation.
+- Empty/loading/error states have stronger hierarchy and a compact observatory-style loading indicator.
+- Timeline track, thumb, active speed/preset controls and LIVE state receive clearer interaction feedback without changing Time 2.0 behavior.
+- Earthquake hover now lifts and brightens the existing instanced marker while selected earthquakes retain the stronger white/scale treatment. No extra marker geometry or draw-call class is introduced.
+- High-DPI hairlines and explicit high-contrast surfaces improve display clarity.
+- Decorative Phase 28 motion is removed in reduced-motion mode; existing global reduced-motion behavior and zero-duration automated camera transitions remain authoritative.
+- Mobile and compact-desktop density were refined without changing the established dock/bottom-sheet interaction model.
+
+The certified v1.13 build passes **40/40** unit-test files and **151/151** tests plus the complete seven-project production browser matrix. Startup JavaScript remains approximately **442.5 kB raw / 141.8 kB gzip**; final compiled CSS is approximately **101.62 kB raw / 19.07 kB gzip**.
 
 ## Data Reliability 2.0
 
@@ -26,10 +44,8 @@ Phase 27 gives the existing provider stack one shared reliability contract inste
 - Existing valid v1.11 provider cache keys and normalized snapshot schemas are preserved, so Phase 27 does not unnecessarily throw away offline data during upgrade.
 - Source timestamps are rejected when implausibly ahead of wall-clock time. CelesTrak receives a deliberately wider publication-skew allowance while retaining the existing ±24-hour propagation trust boundary and two-hour provider fetch policy.
 - Providers that already combine multiple upstream products retain deterministic partial-data behavior: one failing EONET/CelesTrak/SWPC sub-feed does not erase valid sibling data.
-- Display now includes a live **Data reliability** surface for each external provider with LIVE/CACHED/STALE/PARTIAL/OFFLINE/ERROR state, source age, fetch age, network latency, fallback count and cache-recovery visibility.
+- Display includes a live **Data reliability** surface for each external provider with LIVE/CACHED/STALE/PARTIAL/OFFLINE/ERROR state, source age, fetch age, network latency, fallback count and cache-recovery visibility.
 - The provider health layer is diagnostic only. It does not reinterpret scientific data or turn cached/derived state into “live” measurements.
-
-Phase 27 adds dedicated reliability and reliable-load regression suites. The certified v1.12 build passes **40/40** unit-test files and **151/151** tests, with approximately **442.5 kB raw / 141.8 kB gzip** HTML-linked JavaScript. The startup architecture remains inside the Phase 25 release budget.
 
 ## Real-World QA & Interaction Hardening
 
@@ -42,7 +58,7 @@ Phase 26 turns browser interaction reliability into a maintained release surface
 - Natural Earth country-search indexing is single-flight cached: concurrent consumers share one request and one caller aborting does not cancel the shared load.
 - Globe material color transitions are hardened against transient/null Globe.gl material fields observed under WebKit, including the Earth → Night transition.
 - Mobile QA checks actual on-screen geometry and reachability rather than requiring a particular CSS positioning implementation.
-- Cross-browser QA now runs automatically for `main` and all `phase*` development branches so the matrix remains a continuing release gate after Phase 26.
+- Cross-browser QA runs automatically for `main` and all `phase*` development branches.
 
 The automated phone/tablet projects are browser-device emulations. Physical-device visual/touch smoke testing remains a separate manual acceptance step.
 
@@ -52,8 +68,8 @@ Phase 25 changes how the observatory reaches the browser without changing its sc
 
 - The pre-Phase-25 production build shipped one main JavaScript bundle of roughly **2.47 MB minified / 709 KB gzip**.
 - The v1.10 release kept the HTML-linked startup JavaScript graph at approximately **435.5 KB raw / 138.7 KB gzip**.
-- Phase 27 remains inside the same startup budgets at approximately **442.5 KB raw / 141.8 KB gzip** HTML-linked JavaScript.
-- The remaining secondary code is distributed across **10 deferred JavaScript chunks** totaling roughly **2.02 MB raw** in v1.12.
+- Phase 28 remains inside the same startup budgets at approximately **442.5 KB raw / 141.8 KB gzip** HTML-linked JavaScript.
+- The remaining secondary code is distributed across **10 deferred JavaScript chunks** totaling roughly **2.02 MB raw**.
 - The Three.js / Globe.gl WebGL core remains a large, immediately requested async chunk (about **1.97 MB raw / 556 KB gzip**) because the globe is the primary product surface rather than an optional feature.
 - Search, Display/Settings + Saved Worlds, Dynamic Briefings launcher, Above Me UI, Signal Inspector/intelligence, Now UI, and selected-satellite orbit mechanics are loaded through explicit lazy boundaries.
 - Basic satellite hover information appears immediately; richer Orbit 2.0 mechanics are loaded only when satellite interaction requires them.
@@ -62,7 +78,7 @@ Phase 25 changes how the observatory reaches the browser without changing its sc
 - A dedicated `performance:verify` release gate enforces the startup-JavaScript budget and verifies that major lazy chunks and the orbit worker do not leak back into the startup precache.
 - GitHub Actions uses `--legacy-peer-deps` as a narrow workaround for the npm 10.9.8 Arborist peer-resolution crash observed on current hosted runners; application dependency versions are unchanged.
 
-The goal is not to hide Vite's large-chunk warning. The WebGL core is still large. Phase 25 instead keeps nonessential product systems out of the startup path and makes that architectural boundary testable.
+The WebGL core is still large and the warning threshold is not hidden. Phase 25 keeps nonessential product systems out of the startup path and makes that architectural boundary testable.
 
 ## Major systems
 
@@ -164,9 +180,9 @@ Saved Worlds stores up to 24 named browser-local observatory presets using the s
 - deterministic search/commands; no remote AI/geocoder dependency
 - deterministic briefing composition; no generative narration
 - Saved Worlds stores public display state only and introduces no account/cloud backend
-- Phase 25 async chunks retain the same product/data trust boundaries as their pre-split implementations
 - lazy chunks and workers use service-worker runtime cache after first use rather than startup precache
 - deferred UI failures are contained at feature boundaries rather than escalating to the whole React tree
+- Phase 28 presentation polish does not alter scientific semantics or persistence architecture
 - `npm run release` includes startup-architecture performance regression checks
 - the cross-browser QA workflow validates production-build interactions independently from the unit/release gate
 
@@ -217,3 +233,4 @@ Core documents live under [`docs/`](docs/). Phase acceptance records are maintai
 - [`docs/PHASE-25-ACCEPTANCE.md`](docs/PHASE-25-ACCEPTANCE.md) — Performance Architecture 2.0
 - [`docs/PHASE-26-ACCEPTANCE.md`](docs/PHASE-26-ACCEPTANCE.md) — Real-World QA & Interaction Hardening
 - [`docs/PHASE-27-ACCEPTANCE.md`](docs/PHASE-27-ACCEPTANCE.md) — Data Reliability 2.0
+- [`docs/PHASE-28-ACCEPTANCE.md`](docs/PHASE-28-ACCEPTANCE.md) — Visual & Motion Finish
