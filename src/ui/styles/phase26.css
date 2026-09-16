@@ -1,0 +1,50 @@
+.lazy-feature-error {
+  display: grid;
+  place-items: center;
+  min-height: 132px;
+  padding: 18px;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.lazy-feature-error__card {
+  width: min(100%, 430px);
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  background: rgba(4, 9, 16, 0.94);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
+}
+
+.lazy-feature-error__card > strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1rem;
+}
+
+.lazy-feature-error__card > p {
+  margin: 8px 0 14px;
+  color: rgba(235, 242, 250, 0.76);
+  line-height: 1.45;
+}
+
+.search-layer.lazy-feature-error,
+.briefing-launcher-layer.lazy-feature-error {
+  z-index: 120;
+}
+
+.globe-canvas.lazy-feature-error {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+}
+
+@media (max-width: 760px) {
+  .lazy-feature-error {
+    padding: 14px;
+  }
+
+  .lazy-feature-error__card {
+    padding: 16px;
+  }
+}
