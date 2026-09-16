@@ -40,6 +40,8 @@ async function expectElementInViewport(page: Page, locator: Locator): Promise<vo
 
 async function pointerClick(page: Page, locator: Locator): Promise<void> {
   await expect(locator).toBeVisible();
+  await locator.evaluate((element) => element.scrollIntoView({ block: 'center', inline: 'center' }));
+  await expectElementInViewport(page, locator);
   const box = await locator.boundingBox();
   expect(box).not.toBeNull();
   if (!box) return;
