@@ -41,9 +41,14 @@ for (const entry of precache) {
 for (const requiredEntry of ['./index.html', './manifest.webmanifest']) {
   if (!precache.includes(requiredEntry)) throw new Error(`Required application-shell asset missing from precache: ${requiredEntry}`);
 }
-if (!precache.some((entry) => /^\.\/assets\/.*\.js$/.test(entry))) throw new Error('Production JavaScript bundle missing from precache.');
+if (!precache.some((entry) => /^\.\/assets\/.*\.js$/.test(entry))) throw new Error('Production JavaScript entry missing from precache.');
 if (!precache.some((entry) => /^\.\/assets\/.*\.css$/.test(entry))) throw new Error('Production stylesheet bundle missing from precache.');
-if (!precache.some((entry) => /^\.\/assets\/.*worker.*\.js$/.test(entry))) throw new Error('Production orbit worker missing from precache.');
+if (precache.some((entry) => /worker.*\.js$/i.test(entry))) throw new Error('Async orbit worker must be runtime-cached, not startup-precached.');
+if (precache.some((entry) => /(?:Impl|GlobeViewportBase).*\.js$/i.test(entry))) throw new Error('Lazy feature chunk leaked into startup precache.');
+if (precache.length > 16) throw new Error(`Startup precache contains ${precache.length} assets; Phase 25 budget is 16.`);
+
+const assetFiles = await readdir(path.join(dist, 'assets'));
+if (!assetFiles.some((name) => /^orbit\.worker-.*\.js$/i.test(name))) throw new Error('Production orbit worker bundle is missing.');
 
 const manifest = JSON.parse(await readFile(path.join(dist, 'manifest.webmanifest'), 'utf8'));
 if (manifest.name !== 'Signal Earth' || manifest.display !== 'standalone') throw new Error('Unexpected PWA manifest metadata.');
@@ -62,4 +67,4 @@ async function directorySize(directory) {
 const bytes = await directorySize(dist);
 const budget = 25 * 1024 * 1024;
 if (bytes > budget) throw new Error(`Production site is ${(bytes / 1024 / 1024).toFixed(1)} MB; V1 budget is 25 MB.`);
-console.log(`Release verification passed: ${(bytes / 1024 / 1024).toFixed(2)} MB production site with ${precache.length} safe precache entries.`);
+console.log(`Release verification passed: ${(bytes / 1024 / 1024).toFixed(2)} MB production site with ${precache.length} startup-shell precache entries.`);
