@@ -1,4 +1,5 @@
 import type { ProviderAdapter } from '../../core/data/ProviderAdapter';
+import { fetchJsonReliable } from '../../core/data/reliability';
 import { SOURCE_REGISTRY } from '../../core/data/sourceRegistry';
 import type { EarthquakeAlert, EarthquakeFeed, EarthquakeRecord, EarthquakeTimeWindow } from '../../features/seismic/types';
 import { asEarthquakeId } from '../../features/seismic/types';
@@ -91,13 +92,13 @@ export class UsgsEarthquakeProvider implements ProviderAdapter<UsgsGeoJsonCollec
   }
 
   async fetchRaw(signal?: AbortSignal): Promise<UsgsGeoJsonCollection> {
-    const response = await fetch(FEED_URLS[this.window], {
+    return fetchJsonReliable<UsgsGeoJsonCollection>(FEED_URLS[this.window], {
       ...(signal ? { signal } : {}),
+      label: 'USGS earthquake feed',
       headers: { Accept: 'application/geo+json, application/json' },
       cache: 'no-cache',
+      maxResponseBytes: 24 * 1024 * 1024,
     });
-    if (!response.ok) throw new Error(`USGS feed request failed (${response.status})`);
-    return await response.json() as UsgsGeoJsonCollection;
   }
 
   normalize(raw: UsgsGeoJsonCollection): EarthquakeFeed {
