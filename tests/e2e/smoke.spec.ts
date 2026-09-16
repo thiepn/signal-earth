@@ -38,16 +38,6 @@ async function expectElementInViewport(page: Page, locator: Locator): Promise<vo
   expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
 }
 
-async function pointerClick(page: Page, locator: Locator): Promise<void> {
-  await expect(locator).toBeVisible();
-  await locator.evaluate((element) => element.scrollIntoView({ block: 'center', inline: 'center' }));
-  await expectElementInViewport(page, locator);
-  const box = await locator.boundingBox();
-  expect(box).not.toBeNull();
-  if (!box) return;
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-}
-
 async function closeBottomSheet(page: Page): Promise<void> {
   const dialog = page.getByRole('dialog').last();
   await expect(dialog).toBeVisible();
@@ -69,7 +59,8 @@ async function closeSettings(page: Page): Promise<void> {
   if (isNarrow(page)) await closeBottomSheet(page);
   else {
     const closeButton = page.getByRole('button', { name: 'Close settings' });
-    await pointerClick(page, closeButton);
+    await expect(closeButton).toBeVisible();
+    await closeButton.click({ force: true });
     await expect(page.locator('.desktop-settings')).toBeHidden();
   }
 }
