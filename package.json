@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "certify": "npm run typecheck && npm test && npm run build",
     "release:verify": "node scripts/release-verify.mjs",
-    "release": "npm run certify && npm run release:verify"
+    "performance:verify": "node scripts/performance-verify.mjs",
+    "release": "npm run certify && npm run release:verify && npm run performance:verify"
   },
   "dependencies": {
     "globe.gl": "2.46.2",
