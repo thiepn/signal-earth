@@ -1,12 +1,13 @@
 {
   "name": "signal-earth",
   "private": true,
-  "version": "1.13.0",
+  "version": "2.0.0-rc.1",
   "type": "module",
   "description": "A time-aware browser observatory for Earth, orbit, space weather, and the observer.",
+  "packageManager": "npm@10.9.8",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/inject-precache.mjs",
+    "build": "vite build && node scripts/write-release-metadata.mjs && node scripts/inject-precache.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run src/tests",
@@ -16,7 +17,8 @@
     "certify": "npm run typecheck && npm test && npm run build",
     "release:verify": "node scripts/release-verify.mjs",
     "performance:verify": "node scripts/performance-verify.mjs",
-    "release": "npm run certify && npm run release:verify && npm run performance:verify"
+    "candidate:verify": "node scripts/candidate-verify.mjs",
+    "release": "npm run certify && npm run release:verify && npm run performance:verify && npm run candidate:verify"
   },
   "dependencies": {
     "globe.gl": "2.46.2",
@@ -37,6 +39,7 @@
     "vitest": "5.0.0"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.23.0 <23",
+    "npm": ">=10.9.0 <11"
   }
 }
