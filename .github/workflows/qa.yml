@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - 'phase26-*'
+      - 'phase*'
     paths-ignore:
       - 'docs/**'
       - 'README.md'
@@ -54,7 +54,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: phase26-playwright-${{ matrix.project }}
+          name: phase-playwright-${{ matrix.project }}
           path: |
             playwright-report
             test-results
