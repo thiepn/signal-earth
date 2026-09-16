@@ -95,6 +95,7 @@ export class OrbitRenderer implements SceneRenderer {
   #showOrbitPath = true;
   #showGroundTrack = true;
   #suspendedForSeek = false;
+  #lastVisualUpdateAt = -Infinity;
 
   constructor(options: OrbitRendererOptions = {}) {
     this.#onSelect = options.onSelect;
@@ -112,13 +113,21 @@ export class OrbitRenderer implements SceneRenderer {
     this.#rebuildFromData();
   }
 
-  update(): void {
+  update(timestamp: number): void {
     if (!this.#enabled || !this.#mesh || !this.#context || this.#suspendedForSeek) {
       if (this.#halo) this.#halo.visible = false;
       this.#selectedWorldValid = false;
+      this.#lastVisualUpdateAt = -Infinity;
       if (this.#mesh && this.#suspendedForSeek) this.#hideAllInstances();
       return;
     }
+
+    const minUpdateInterval = this.#quality?.effects === 'enhanced' ? 16 : this.#quality?.effects === 'normal' ? 33 : 50;
+    if (timestamp - this.#lastVisualUpdateAt < minUpdateInterval) {
+      this.#updateHalo();
+      return;
+    }
+    this.#lastVisualUpdateAt = timestamp;
 
     const simulationTime = this.#getSimulationTime();
     this.#selectedWorldValid = false;
@@ -144,10 +153,8 @@ export class OrbitRenderer implements SceneRenderer {
       this.#dummy.rotation.set(0, 0, 0);
       this.#dummy.updateMatrix();
       this.#mesh.setMatrixAt(instance, this.#dummy.matrix);
-      this.#mesh.setColorAt(instance, satellite.id === this.#selectedId ? SELECTED_COLOR : CATEGORY_COLOR_OBJECTS[satellite.category]);
     }
     this.#mesh.instanceMatrix.needsUpdate = true;
-    if (this.#mesh.instanceColor) this.#mesh.instanceColor.needsUpdate = true;
     this.#updateHalo();
   }
 
@@ -240,6 +247,7 @@ export class OrbitRenderer implements SceneRenderer {
       this.#disposeTrailLine();
     }
     this.#selectedId = id;
+    this.#updateInstanceColors();
     this.#emitSelectedTelemetry();
     this.#updateTrackVisibility();
   }
@@ -345,6 +353,17 @@ export class OrbitRenderer implements SceneRenderer {
     this.#geometry = geometry;
     this.#material = material;
     this.#mesh = mesh;
+    this.#updateInstanceColors();
+  }
+
+  #updateInstanceColors(): void {
+    if (!this.#mesh) return;
+    for (let instance = 0; instance < this.#renderedIndices.length; instance += 1) {
+      const satellite = this.#catalog[this.#renderedIndices[instance]!];
+      if (!satellite) continue;
+      this.#mesh.setColorAt(instance, satellite.id === this.#selectedId ? SELECTED_COLOR : CATEGORY_COLOR_OBJECTS[satellite.category]);
+    }
+    if (this.#mesh.instanceColor) this.#mesh.instanceColor.needsUpdate = true;
   }
 
   #hideAllInstances(): void {

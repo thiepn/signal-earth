@@ -690,11 +690,11 @@ export function App() {
 
 
   const searchIndex = useMemo(() => buildSearchDocuments({
-    earthquakes: visibleEarthquakes,
-    naturalEvents: visibleNaturalEvents,
+    earthquakes: magnitudeFilteredEarthquakes,
+    naturalEvents: categoryFilteredNaturalEvents,
     satellites: orbitSnapshot?.data.satellites ?? [],
     countries: searchCountries,
-  }), [visibleEarthquakes, visibleNaturalEvents, orbitSnapshot, searchCountries]);
+  }), [categoryFilteredNaturalEvents, magnitudeFilteredEarthquakes, orbitSnapshot, searchCountries]);
 
   const observerSolarEventBucket = Math.floor(simulationTime / (15 * 60_000));
   const observerSolarEvents = useMemo(
@@ -765,7 +765,7 @@ export function App() {
     emit({ type: 'SYNC_CLOCK', clock: timeEngineRef.current.snapshot() });
   }, [emit]);
 
-  useVisibilityAwareInterval(syncClock, 250, true, { runImmediately: true, runOnVisible: true });
+  useVisibilityAwareInterval(syncClock, 1_000, true, { runImmediately: true, runOnVisible: true });
 
   const resetGlobe = useCallback(() => {
     if (tourEngineRef.current.active) {

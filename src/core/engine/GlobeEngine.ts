@@ -451,7 +451,7 @@ export class GlobeEngine {
         for (const listener of this.#metricsListeners) listener(metrics);
 
         // Ignore startup compilation/texture decode when evaluating quality.
-        if (timestamp - this.#startedAt > 5_000) this.#quality.observeFps(sample.fps);
+        if (timestamp - this.#startedAt > 5_000) this.#quality.observePerformance(sample);
       }
 
       this.#animationFrame = requestAnimationFrame(tick);

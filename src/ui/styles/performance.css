@@ -1,0 +1,60 @@
+/* Signal Earth 2.1.1 — runtime compositor hotfix.
+   Never blur the continuously animated WebGL canvas through application chrome. */
+.panel-surface,
+.top-bar,
+.timeline-bar,
+.timeline-controls,
+.search-dialog,
+.search-scrim,
+.sheet-scrim,
+.bottom-sheet,
+.hover-preview,
+.toast,
+.loading-state,
+.lazy-feature-error__card,
+.mobile-dock,
+.briefing-launcher-layer,
+.briefing-launcher,
+.briefing-launcher__header,
+.briefing-overlay {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.panel-surface,
+.timeline-bar,
+.timeline-controls {
+  background-color: rgba(7, 9, 10, .97) !important;
+}
+
+.top-bar {
+  background-color: rgba(3, 5, 6, .99) !important;
+}
+
+.search-dialog,
+.bottom-sheet,
+.hover-preview,
+.toast,
+.loading-state,
+.lazy-feature-error__card,
+.briefing-launcher,
+.briefing-launcher__header,
+.briefing-overlay {
+  background-color: rgba(8, 10, 11, .99) !important;
+}
+
+.search-scrim,
+.sheet-scrim,
+.briefing-launcher-layer {
+  background-color: rgba(1, 3, 4, .78) !important;
+}
+
+.mobile-dock {
+  background-color: rgba(5, 7, 8, .99) !important;
+}
+
+/* The decorative grid was almost invisible at 2.1 opacity but still required a
+   full-viewport masked composite over every WebGL frame. */
+.globe-grid {
+  display: none !important;
+}

@@ -300,7 +300,7 @@ export class EarthRenderer implements SceneRenderer {
     this.#nightGeometry?.dispose();
     this.#nightMaterial?.dispose();
 
-    const segments: [number, number] = profile.effects === 'enhanced' ? [160, 96] : profile.effects === 'normal' ? [112, 72] : [72, 48];
+    const segments: [number, number] = profile.effects === 'enhanced' ? [128, 80] : profile.effects === 'normal' ? [80, 52] : [48, 32];
     const radius = this.#context.globe.getGlobeRadius() * 1.0025;
     const geometry = new THREE.SphereGeometry(radius, segments[0], segments[1]);
     const material = new THREE.ShaderMaterial({
