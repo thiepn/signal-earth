@@ -8,18 +8,21 @@ const baseURL = externalBaseUrl
 export default defineConfig({
   testDir: './tests/e2e',
   outputDir: 'test-results',
-  fullyParallel: true,
+  // Signal Earth is a GPU/WebGL-heavy application. Serial browser execution avoids
+  // false protocol/session failures caused by several globe renderers fighting for
+  // the same hosted-runner GPU/CPU budget while still exercising every project.
+  fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 4 : undefined,
-  timeout: 45_000,
-  expect: { timeout: 12_000 },
+  workers: process.env.CI ? 1 : undefined,
+  timeout: 60_000,
+  expect: { timeout: 15_000 },
   reporter: process.env.CI
     ? [['line'], ['html', { outputFolder: 'playwright-report', open: 'never' }]]
     : [['list']],
   use: {
     baseURL,
-    actionTimeout: 10_000,
+    actionTimeout: 15_000,
     navigationTimeout: 30_000,
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
