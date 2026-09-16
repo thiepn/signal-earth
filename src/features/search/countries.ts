@@ -10,6 +10,9 @@ export interface SearchCountry {
   coordinates: GeoCoordinates;
 }
 
+let cachedCountries: SearchCountry[] | null = null;
+let countriesRequest: Promise<SearchCountry[]> | null = null;
+
 function collectPoints(value: unknown, out: Array<[number, number]>): void {
   if (!Array.isArray(value)) return;
   if (value.length >= 2 && typeof value[0] === 'number' && typeof value[1] === 'number') {
@@ -41,9 +44,33 @@ function representativePoint(geometry: GeoJsonFeature['geometry']): GeoCoordinat
   return { lat: latSum / points.length, lon };
 }
 
-export async function loadSearchCountries(signal?: AbortSignal): Promise<SearchCountry[]> {
+function abortError(): DOMException {
+  return new DOMException('Country search loading was aborted.', 'AbortError');
+}
+
+function waitForSharedRequest(request: Promise<SearchCountry[]>, signal?: AbortSignal): Promise<SearchCountry[]> {
+  if (!signal) return request;
+  if (signal.aborted) return Promise.reject(abortError());
+
+  return new Promise<SearchCountry[]>((resolve, reject) => {
+    const onAbort = () => reject(abortError());
+    signal.addEventListener('abort', onAbort, { once: true });
+    request.then(
+      (countries) => {
+        signal.removeEventListener('abort', onAbort);
+        if (!signal.aborted) resolve(countries);
+      },
+      (error: unknown) => {
+        signal.removeEventListener('abort', onAbort);
+        if (!signal.aborted) reject(error);
+      },
+    );
+  });
+}
+
+async function fetchSearchCountries(): Promise<SearchCountry[]> {
   const url = new URL('data/natural-earth-lowres.geojson', document.baseURI).toString();
-  const response = await fetch(url, { cache: 'force-cache', ...(signal ? { signal } : {}) });
+  const response = await fetch(url, { cache: 'force-cache' });
   if (!response.ok) throw new Error(`Natural Earth countries returned HTTP ${response.status}`);
   const payload = await response.json() as { features?: GeoJsonFeature[] };
   if (!Array.isArray(payload.features)) return [];
@@ -54,4 +81,19 @@ export async function loadSearchCountries(signal?: AbortSignal): Promise<SearchC
     if (name && coordinates) countries.push({ name, coordinates });
   }
   return countries.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function loadSearchCountries(signal?: AbortSignal): Promise<SearchCountry[]> {
+  if (cachedCountries) return signal?.aborted ? Promise.reject(abortError()) : Promise.resolve(cachedCountries);
+
+  if (!countriesRequest) {
+    countriesRequest = fetchSearchCountries().then((countries) => {
+      cachedCountries = countries;
+      return countries;
+    }).finally(() => {
+      countriesRequest = null;
+    });
+  }
+
+  return waitForSharedRequest(countriesRequest, signal);
 }
