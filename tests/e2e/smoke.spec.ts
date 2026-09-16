@@ -1,4 +1,4 @@
-import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test';
 
 function isNarrow(page: Page): boolean {
   return (page.viewportSize()?.width ?? 10_000) <= 760;
@@ -17,19 +17,25 @@ async function boot(page: Page): Promise<void> {
   await expect(page.getByRole('button', { name: 'Search Signal Earth' })).toBeVisible();
 }
 
-async function expectNoHorizontalOverflow(page: Page): Promise<void> {
-  await expect.poll(async () => page.evaluate(() => ({
-    width: window.innerWidth,
-    scrollWidth: document.documentElement.scrollWidth,
-  }))).toEqual(expect.objectContaining({ scrollWidth: page.viewportSize()?.width ?? 0 }));
-}
-
 async function expectViewportContained(page: Page): Promise<void> {
   const result = await page.evaluate(() => ({
     width: window.innerWidth,
     scrollWidth: document.documentElement.scrollWidth,
   }));
   expect(result.scrollWidth).toBeLessThanOrEqual(result.width + 2);
+}
+
+async function expectElementInViewport(page: Page, locator: Locator): Promise<void> {
+  await expect(locator).toBeVisible();
+  const box = await locator.boundingBox();
+  const viewport = page.viewportSize();
+  expect(box).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  if (!box || !viewport) return;
+  expect(box.x).toBeGreaterThanOrEqual(-1);
+  expect(box.y).toBeGreaterThanOrEqual(-1);
+  expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
+  expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
 }
 
 async function closeBottomSheet(page: Page): Promise<void> {
@@ -59,8 +65,10 @@ async function closeSettings(page: Page): Promise<void> {
 
 async function openMobileDock(page: Page, name: string, heading: RegExp | string): Promise<void> {
   const dock = page.getByRole('navigation', { name: 'Signal Earth controls' });
-  await expect(dock).toBeVisible();
-  await dock.getByRole('button', { name: new RegExp(name, 'i') }).click();
+  await expectElementInViewport(page, dock);
+  const button = dock.getByRole('button', { name: new RegExp(name, 'i') });
+  await expectElementInViewport(page, button);
+  await button.click();
   await expect(page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: heading }) })).toBeVisible();
 }
 
@@ -71,8 +79,10 @@ test('shell boots without viewport overflow @production', async ({ page }, testI
 
   if (isNarrow(page)) {
     const dock = page.getByRole('navigation', { name: 'Signal Earth controls' });
-    await expect(dock).toBeVisible();
-    await expect.poll(() => dock.evaluate((node) => getComputedStyle(node).position)).toBe('fixed');
+    await expectElementInViewport(page, dock);
+    for (const button of await dock.getByRole('button').all()) {
+      await expectElementInViewport(page, button);
+    }
   }
 
   expect(pageErrors, `${testInfo.project.name} emitted uncaught page errors`).toEqual([]);
@@ -241,17 +251,17 @@ test('offline reopening preserves shell and already-used lazy tools', async ({ p
   }
 });
 
-test('mobile orientation changes keep fixed controls usable', async ({ page }, testInfo) => {
+test('mobile orientation changes keep controls inside the viewport', async ({ page }, testInfo) => {
   test.skip(!/android-chromium|ios-webkit/.test(testInfo.project.name), 'Orientation scenario applies to phone projects.');
   await boot(page);
   await expectViewportContained(page);
 
   await page.setViewportSize({ width: 844, height: 390 });
-  await expect(page.getByRole('button', { name: 'Search Signal Earth' })).toBeVisible();
+  await expectElementInViewport(page, page.getByRole('button', { name: 'Search Signal Earth' }));
   await expectViewportContained(page);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByRole('navigation', { name: 'Signal Earth controls' })).toBeVisible();
+  await expectElementInViewport(page, page.getByRole('navigation', { name: 'Signal Earth controls' }));
   await expectViewportContained(page);
 });
 
