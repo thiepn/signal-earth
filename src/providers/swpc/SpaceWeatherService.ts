@@ -5,9 +5,9 @@ import { RequestCoordinator } from '../../core/data/reliability';
 import type { SpaceWeatherFeed } from '../../features/space-weather/types';
 import { SwpcProvider } from './SwpcProvider';
 
-const CACHE_KEY = 'swpc:space-weather:v2';
-const CACHE_SCHEMA_VERSION = 2;
-const PROVIDER_VERSION = 'swpc-products-v2-reliable';
+const CACHE_KEY = 'swpc:space-weather:v1';
+const CACHE_SCHEMA_VERSION = 1;
+const PROVIDER_VERSION = 'swpc-products-v1';
 
 export interface SpaceWeatherLoadOptions extends ReliableLoadOptions {}
 
