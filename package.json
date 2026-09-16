@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "qa:e2e": "npm run build && playwright test",
+    "qa:e2e:run": "playwright test",
     "certify": "npm run typecheck && npm test && npm run build",
     "release:verify": "node scripts/release-verify.mjs",
     "performance:verify": "node scripts/performance-verify.mjs",
@@ -25,6 +27,7 @@
     "three": "0.185.1"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@types/three": "0.185.4",
