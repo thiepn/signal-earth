@@ -6,11 +6,30 @@ Signal Earth is a static, browser-first observatory for Earth events, atmosphere
 
 ## Current status
 
-**Signal Earth v1.11.0 — Phase 26 Real-World QA & Interaction Hardening** is production-built and release-certified for GitHub Pages.
+**Signal Earth v1.12.0 — Phase 27 Data Reliability 2.0** is production-built and release-certified for GitHub Pages.
 
 Live deployment: **https://thiepn.dev/signal-earth/**
 
-The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Time 2.0 replay, Observatory UX 2.0, deterministic Signal Intelligence, Above Me 2.0, Orbit 2.0, Dynamic Briefings 2.0, Saved Worlds, shareable views, capture/recording, PWA/offline-shell support, progressive loading, and the Phase 26 cross-browser interaction-hardening layer.
+The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Time 2.0 replay, Observatory UX 2.0, deterministic Signal Intelligence, Above Me 2.0, Orbit 2.0, Dynamic Briefings 2.0, Saved Worlds, shareable views, capture/recording, PWA/offline-shell support, progressive loading, cross-browser interaction hardening, and the Data Reliability 2.0 provider-resilience layer.
+
+## Data Reliability 2.0
+
+Phase 27 gives the existing provider stack one shared reliability contract instead of five independently drifting cache/network fallback implementations.
+
+- USGS, NASA EONET, CelesTrak, NOAA SWPC, and Open-Meteo service loads now pass through the same validated memory → IndexedDB → network → stale-fallback path.
+- Concurrent same-key loads are single-flight coordinated. One caller may abort without cancelling a still-needed request for another caller; the shared request is cancelled only when no consumers remain.
+- Transient failures use deterministic bounded retry/backoff. HTTP 408/425/429/500/502/503/504, network failures, malformed payloads and validation failures can be retried without unbounded loops or random jitter.
+- `Retry-After` is honored where response metadata is available, and rate limiting is classified separately from generic network or HTTP failures.
+- Provider requests short-circuit while the browser is offline instead of repeatedly attempting a known-impossible network load.
+- Cached snapshots are audited before use: provider identity, schema/provider versions, fetch/expiry timestamps, source timestamps and normalized payload validation must all pass.
+- A corrupt or incompatible IndexedDB entry is deleted before it can be used as a fallback. Validator exceptions are treated as cache corruption rather than allowed to escape through the loading path.
+- Existing valid v1.11 provider cache keys and normalized snapshot schemas are preserved, so Phase 27 does not unnecessarily throw away offline data during upgrade.
+- Source timestamps are rejected when implausibly ahead of wall-clock time. CelesTrak receives a deliberately wider publication-skew allowance while retaining the existing ±24-hour propagation trust boundary and two-hour provider fetch policy.
+- Providers that already combine multiple upstream products retain deterministic partial-data behavior: one failing EONET/CelesTrak/SWPC sub-feed does not erase valid sibling data.
+- Display now includes a live **Data reliability** surface for each external provider with LIVE/CACHED/STALE/PARTIAL/OFFLINE/ERROR state, source age, fetch age, network latency, fallback count and cache-recovery visibility.
+- The provider health layer is diagnostic only. It does not reinterpret scientific data or turn cached/derived state into “live” measurements.
+
+Phase 27 adds dedicated reliability and reliable-load regression suites. The certified v1.12 build passes **40/40** unit-test files and **151/151** tests, with approximately **442.5 kB raw / 141.8 kB gzip** HTML-linked JavaScript. The startup architecture remains inside the Phase 25 release budget.
 
 ## Real-World QA & Interaction Hardening
 
@@ -23,6 +42,7 @@ Phase 26 turns browser interaction reliability into a maintained release surface
 - Natural Earth country-search indexing is single-flight cached: concurrent consumers share one request and one caller aborting does not cancel the shared load.
 - Globe material color transitions are hardened against transient/null Globe.gl material fields observed under WebKit, including the Earth → Night transition.
 - Mobile QA checks actual on-screen geometry and reachability rather than requiring a particular CSS positioning implementation.
+- Cross-browser QA now runs automatically for `main` and all `phase*` development branches so the matrix remains a continuing release gate after Phase 26.
 
 The automated phone/tablet projects are browser-device emulations. Physical-device visual/touch smoke testing remains a separate manual acceptance step.
 
@@ -31,15 +51,16 @@ The automated phone/tablet projects are browser-device emulations. Physical-devi
 Phase 25 changes how the observatory reaches the browser without changing its scientific/data semantics.
 
 - The pre-Phase-25 production build shipped one main JavaScript bundle of roughly **2.47 MB minified / 709 KB gzip**.
-- The v1.10 release keeps the HTML-linked startup JavaScript graph at approximately **435.5 KB raw / 138.7 KB gzip**.
-- The remaining secondary code is distributed across **10 deferred JavaScript chunks** totaling roughly **2.01 MB raw**.
+- The v1.10 release kept the HTML-linked startup JavaScript graph at approximately **435.5 KB raw / 138.7 KB gzip**.
+- Phase 27 remains inside the same startup budgets at approximately **442.5 KB raw / 141.8 KB gzip** HTML-linked JavaScript.
+- The remaining secondary code is distributed across **10 deferred JavaScript chunks** totaling roughly **2.02 MB raw** in v1.12.
 - The Three.js / Globe.gl WebGL core remains a large, immediately requested async chunk (about **1.97 MB raw / 556 KB gzip**) because the globe is the primary product surface rather than an optional feature.
 - Search, Display/Settings + Saved Worlds, Dynamic Briefings launcher, Above Me UI, Signal Inspector/intelligence, Now UI, and selected-satellite orbit mechanics are loaded through explicit lazy boundaries.
 - Basic satellite hover information appears immediately; richer Orbit 2.0 mechanics are loaded only when satellite interaction requires them.
 - `OrbitWorkerClient` no longer creates the satellite worker just because the globe mounted. The worker starts on the first real catalog/propagation/observer request.
-- The service worker precaches only the install/startup shell. Lazy feature chunks and the orbit worker are cached on first use instead of being downloaded during service-worker installation.
-- A new `performance:verify` release gate enforces the startup-JavaScript budget and verifies that the major lazy chunks and orbit worker do not leak back into the startup precache.
-- GitHub Actions uses `--legacy-peer-deps` as a narrow workaround for an npm 10.9.8 Arborist peer-resolution crash observed on current hosted runners; application dependency versions are unchanged.
+- The service worker precaches the install/startup shell while lazy feature chunks and the orbit worker are cached on first use.
+- A dedicated `performance:verify` release gate enforces the startup-JavaScript budget and verifies that major lazy chunks and the orbit worker do not leak back into the startup precache.
+- GitHub Actions uses `--legacy-peer-deps` as a narrow workaround for the npm 10.9.8 Arborist peer-resolution crash observed on current hosted runners; application dependency versions are unchanged.
 
 The goal is not to hide Vite's large-chunk warning. The WebGL core is still large. Phase 25 instead keeps nonessential product systems out of the startup path and makes that architectural boundary testable.
 
@@ -99,14 +120,14 @@ Saved Worlds stores up to 24 named browser-local observatory presets using the s
 - right: inspector appears when a signal is selected
 - bottom: Time 2.0 timeline
 - globe: drag, zoom, hover signals, click signals or Earth locations
-- Display contains rendering/accessibility/release tools and Saved Worlds
+- Display contains rendering/accessibility, provider reliability, release tools and Saved Worlds
 
 ### Mobile
 
 - compact top bar with Search
 - persistent **Now / Layers / Here / Time / Inspect** dock
 - one bottom sheet at a time
-- the same intelligence, observer, timeline, briefing and Saved Worlds semantics as desktop
+- the same intelligence, observer, timeline, briefing, reliability and Saved Worlds semantics as desktop
 
 ### Keyboard
 
@@ -126,6 +147,12 @@ Saved Worlds stores up to 24 named browser-local observatory presets using the s
 - one central `TimeEngine` and one ActionBus
 - high-frequency renderer/propagation state stays outside React state
 - provider snapshots use IndexedDB caches with provider-specific freshness policies
+- external provider services share one validated reliability/cache/fallback contract
+- concurrent provider requests are coalesced without coupling independent caller cancellation
+- cache entries must pass provider/schema/version/timestamp/data validation before reuse
+- invalid local cache entries are removed rather than presented as stale data
+- transient retries are bounded and deterministic; provider failures never retry indefinitely
+- provider health labels distinguish live, cached, stale, partial, offline and failed states
 - USGS earthquakes remain observed data
 - NASA EONET geometry is time-aware and never extrapolated into invented tracks
 - NASA GIBS imagery is observation-time aware and is not treated as forecast data
@@ -189,3 +216,4 @@ Core documents live under [`docs/`](docs/). Phase acceptance records are maintai
 - [`docs/PHASE-24-ACCEPTANCE.md`](docs/PHASE-24-ACCEPTANCE.md) — Saved Worlds
 - [`docs/PHASE-25-ACCEPTANCE.md`](docs/PHASE-25-ACCEPTANCE.md) — Performance Architecture 2.0
 - [`docs/PHASE-26-ACCEPTANCE.md`](docs/PHASE-26-ACCEPTANCE.md) — Real-World QA & Interaction Hardening
+- [`docs/PHASE-27-ACCEPTANCE.md`](docs/PHASE-27-ACCEPTANCE.md) — Data Reliability 2.0
