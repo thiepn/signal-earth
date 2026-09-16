@@ -17,6 +17,27 @@ function seededRandom(seed: number): () => number {
   };
 }
 
+/**
+ * Globe.gl owns the default globe material and may replace/reconfigure its
+ * texture-backed color fields while an image update is settling. WebKit can
+ * expose that transient state as a null Color during a same-frame visual-mode
+ * switch. Treat those fields as runtime-nullable even though Three's typings do
+ * not, and restore a Color rather than letting a presentation change crash the
+ * render loop.
+ */
+function setMaterialColor(
+  material: THREE.MeshPhongMaterial,
+  field: 'color' | 'emissive' | 'specular',
+  value: THREE.ColorRepresentation,
+): void {
+  const current = material[field] as THREE.Color | null | undefined;
+  if (current?.isColor) {
+    current.set(value);
+    return;
+  }
+  material[field] = new THREE.Color(value);
+}
+
 export interface EarthRendererOptions {
   getSimulationTime?: () => number;
   getVisualMode?: () => VisualMode;
@@ -135,8 +156,8 @@ export class EarthRenderer implements SceneRenderer {
     const material = globe.globeMaterial();
     if (material instanceof THREE.MeshPhongMaterial) {
       material.shininess = 4;
-      material.specular.set(0x122d40);
-      material.emissive.set(0x000000);
+      setMaterialColor(material, 'specular', 0x122d40);
+      setMaterialColor(material, 'emissive', 0x000000);
     }
 
     this.#createNightOverlay(context.getQuality());
@@ -247,8 +268,8 @@ export class EarthRenderer implements SceneRenderer {
     const material = globe.globeMaterial();
     if (material instanceof THREE.MeshPhongMaterial) {
       material.wireframe = profile.wireframe;
-      material.color.set(mode === 'wireframe' ? 0x7feaff : 0xffffff);
-      material.emissive.set(mode === 'night' ? 0x020713 : mode === 'wireframe' ? 0x00151b : 0x000000);
+      setMaterialColor(material, 'color', mode === 'wireframe' ? 0x7feaff : 0xffffff);
+      setMaterialColor(material, 'emissive', mode === 'night' ? 0x020713 : mode === 'wireframe' ? 0x00151b : 0x000000);
       material.emissiveIntensity = mode === 'night' ? 0.3 : mode === 'wireframe' ? 0.2 : 0;
       material.needsUpdate = true;
     }
