@@ -129,6 +129,7 @@ export class EarthRenderer implements SceneRenderer {
   #nightTexture: THREE.Texture | null = null;
   #nightTextureRequest = 0;
   #lastAstronomyUpdate = -Infinity;
+  #astronomyIntervalMs = 80;
   #lastSolar: SolarCoordinates | null = null;
 
   constructor(options: EarthRendererOptions = {}) {
@@ -177,6 +178,11 @@ export class EarthRenderer implements SceneRenderer {
 
     const textureChanged = this.#currentTexture !== profile.earthTexture;
     this.#currentTexture = profile.earthTexture;
+    this.#astronomyIntervalMs = profile.effects === 'reduced' ? 1_000 : profile.effects === 'normal' ? 250 : 80;
+    const curvature = profile.effects === 'reduced' ? 12 : profile.effects === 'normal' ? 6 : 4;
+    this.#context.globe
+      .globeCurvatureResolution(curvature)
+      .showAtmosphere(profile.atmosphere !== 'basic');
     if (textureChanged || this.#currentMode === null) this.#applyBaseTexture();
 
     const atmosphereAltitude = profile.atmosphere === 'basic'
@@ -191,6 +197,7 @@ export class EarthRenderer implements SceneRenderer {
     }
 
     if (this.#currentNightEffects !== profile.effects) this.#createNightOverlay(profile);
+    this.#syncNightVisibility();
     this.#loadNightTexture(profile.earthTexture);
   }
 
@@ -221,7 +228,7 @@ export class EarthRenderer implements SceneRenderer {
 
   #updateAstronomy(renderTimestamp: number, force = false): void {
     if (!this.#context || !this.#sunLight) return;
-    if (!force && renderTimestamp - this.#lastAstronomyUpdate < 80) return;
+    if (!force && renderTimestamp - this.#lastAstronomyUpdate < this.#astronomyIntervalMs) return;
     this.#lastAstronomyUpdate = renderTimestamp;
 
     const simulationTime = this.#getSimulationTime();
@@ -258,12 +265,12 @@ export class EarthRenderer implements SceneRenderer {
       .backgroundColor(profile.background)
       .atmosphereColor(profile.atmosphereColor)
       .showGraticules(profile.graticules)
-      .showAtmosphere(mode !== 'wireframe' || this.#context.getQualityLevel() !== 'low');
+      .showAtmosphere(this.#context.getQualityLevel() !== 'low');
 
     if (this.#ambientLight) this.#ambientLight.intensity = profile.ambient;
     if (this.#sunLight) this.#sunLight.intensity = profile.sunlight;
     if (this.#nightMaterial) this.#nightMaterial.uniforms['uIntensity']!.value = profile.cityLights;
-    if (this.#nightMesh) this.#nightMesh.visible = profile.cityLights > 0;
+    this.#syncNightVisibility();
 
     const material = globe.globeMaterial();
     if (material instanceof THREE.MeshPhongMaterial) {
@@ -300,7 +307,7 @@ export class EarthRenderer implements SceneRenderer {
     this.#nightGeometry?.dispose();
     this.#nightMaterial?.dispose();
 
-    const segments: [number, number] = profile.effects === 'enhanced' ? [160, 96] : profile.effects === 'normal' ? [112, 72] : [72, 48];
+    const segments: [number, number] = profile.effects === 'enhanced' ? [128, 80] : profile.effects === 'normal' ? [80, 52] : [48, 32];
     const radius = this.#context.globe.getGlobeRadius() * 1.0025;
     const geometry = new THREE.SphereGeometry(radius, segments[0], segments[1]);
     const material = new THREE.ShaderMaterial({
@@ -347,7 +354,15 @@ export class EarthRenderer implements SceneRenderer {
     this.#nightGeometry = geometry;
     this.#nightMaterial = material;
     this.#currentNightEffects = profile.effects;
+    this.#syncNightVisibility();
     this.#loadNightTexture(profile.earthTexture);
+  }
+
+  #syncNightVisibility(): void {
+    if (!this.#nightMesh) return;
+    const mode = this.#currentMode ?? this.#getVisualMode();
+    const cityLights = MODE_PROFILES[mode].cityLights;
+    this.#nightMesh.visible = cityLights > 0 && (this.#currentNightEffects !== 'reduced' || mode === 'night');
   }
 
   #loadNightTexture(resolution: QualityProfile['earthTexture']): void {

@@ -62,7 +62,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   border: 1px solid var(--se-line);
   border-radius: var(--se-radius);
   background: var(--se-surface);
-  backdrop-filter: blur(18px) saturate(120%);
+  backdrop-filter: none;
   box-shadow: var(--se-shadow);
 }
 .panel-header,
@@ -149,7 +149,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   border: 1px solid var(--se-line);
   border-radius: 13px;
   background: rgba(4, 10, 16, .72);
-  backdrop-filter: blur(18px) saturate(120%);
+  backdrop-filter: none;
   box-shadow: 0 10px 40px rgba(0,0,0,.22);
 }
 .brand {
@@ -368,7 +368,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .search-layer,
 .sheet-layer { position: fixed; inset: 0; z-index: 70; }
 .search-scrim,
-.sheet-scrim { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: rgba(1,4,8,.6); backdrop-filter: blur(4px); cursor: default; }
+.sheet-scrim { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: rgba(1,4,8,.6); backdrop-filter: none; cursor: default; }
 .search-dialog { position: absolute; top: 12vh; left: 50%; width: min(560px, calc(100vw - 32px)); transform: translateX(-50%); border: 1px solid var(--se-line-strong); border-radius: 15px; overflow: hidden; background: rgba(6,12,18,.96); box-shadow: 0 30px 90px rgba(0,0,0,.55); }
 .search-input-wrap { min-height: 58px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 0 13px; border-bottom: 1px solid var(--se-line); }
 .search-input-wrap > span { color: var(--se-accent); font-size: 1.1rem; }
@@ -477,7 +477,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
     border: 1px solid var(--se-line);
     border-radius: 13px;
     background: rgba(4,10,16,.82);
-    backdrop-filter: blur(18px);
+    backdrop-filter: none;
     box-shadow: 0 12px 45px rgba(0,0,0,.3);
   }
   .mobile-dock button { display: grid; place-items: center; align-content: center; gap: 3px; min-width: 0; border: 0; border-radius: 9px; background: transparent; color: var(--se-dim); font-size: .56rem; cursor: pointer; }
@@ -485,7 +485,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   .mobile-dock button.is-active { background: rgba(158,231,255,.075); color: var(--se-accent); }
 
   .sheet-layer { display: block; z-index: 25; }
-  .sheet-scrim { background: rgba(1,4,8,.44); backdrop-filter: blur(2px); }
+  .sheet-scrim { background: rgba(1,4,8,.44); backdrop-filter: none; }
   .bottom-sheet { position: absolute; left: 8px; right: 8px; bottom: max(71px, calc(env(safe-area-inset-bottom) + 71px)); max-height: min(65dvh, 560px); overflow: auto; border: 1px solid var(--se-line-strong); border-radius: 16px; background: rgba(6,12,18,.97); box-shadow: 0 25px 80px rgba(0,0,0,.52); }
   .sheet-handle { width: 34px; height: 3px; margin: 8px auto 1px; border-radius: 99px; background: var(--se-line-strong); }
   .sheet-header { padding: 10px 13px 10px 15px; border-bottom: 1px solid var(--se-line); }
@@ -999,7 +999,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   place-items: center;
   padding: 24px;
   background: rgba(1, 4, 8, .5);
-  backdrop-filter: blur(7px);
+  backdrop-filter: none;
 }
 .briefing-launcher {
   width: min(760px, calc(100vw - 32px));
@@ -1007,7 +1007,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   overflow: auto;
   background: rgba(5, 11, 17, .96);
 }
-.briefing-launcher__header { position: sticky; top: 0; z-index: 1; background: rgba(5, 11, 17, .94); backdrop-filter: blur(14px); }
+.briefing-launcher__header { position: sticky; top: 0; z-index: 1; background: rgba(5, 11, 17, .94); backdrop-filter: none; }
 .briefing-launcher__intro {
   margin: 0;
   padding: 2px 16px 14px;
@@ -1062,7 +1062,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   border-radius: 13px;
   background: linear-gradient(180deg, rgba(5,12,19,.91), rgba(4,9,15,.96));
   box-shadow: 0 24px 80px rgba(0,0,0,.55), 0 0 36px rgba(105,205,245,.04);
-  backdrop-filter: blur(16px) saturate(120%);
+  backdrop-filter: none;
 }
 .briefing-overlay__line { height: 2px; margin: -17px -18px 14px; overflow: hidden; border-radius: 13px 13px 0 0; background: rgba(158,231,255,.08); }
 .briefing-overlay__line span { display: block; height: 100%; background: linear-gradient(90deg, rgba(152,244,199,.85), var(--se-accent)); transition: width .35s ease; }

@@ -1,3 +1,5 @@
+import type { PerformanceSample } from './FramePerformanceMonitor';
+
 export type QualityLevel = 'low' | 'medium' | 'high';
 export type QualityMode = 'auto' | 'manual';
 
@@ -12,32 +14,33 @@ export interface QualityProfile {
 
 export const QUALITY_PROFILES: Record<QualityLevel, QualityProfile> = {
   low: {
-    pixelRatio: 1,
+    pixelRatio: 0.5,
     earthTexture: '2k',
     atmosphere: 'basic',
-    satelliteCap: 350,
+    satelliteCap: 180,
     effects: 'reduced',
-    starCount: 700,
+    starCount: 240,
   },
   medium: {
-    pixelRatio: 1.5,
+    pixelRatio: 1.0,
     earthTexture: '2k',
     atmosphere: 'normal',
-    satelliteCap: 600,
+    satelliteCap: 360,
     effects: 'normal',
-    starCount: 1200,
+    starCount: 800,
   },
   high: {
-    pixelRatio: 2,
+    pixelRatio: 1.4,
     earthTexture: '4k',
     atmosphere: 'full',
-    satelliteCap: 800,
+    satelliteCap: 560,
     effects: 'enhanced',
-    starCount: 1900,
+    starCount: 1200,
   },
 };
 
 type QualityListener = (level: QualityLevel, profile: QualityProfile) => void;
+type FrameHealth = Pick<PerformanceSample, 'fps' | 'p95FrameMs' | 'longFrameRate'>;
 
 function initialAutoLevel(): QualityLevel {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return 'medium';
@@ -45,11 +48,14 @@ function initialAutoLevel(): QualityLevel {
   const nav = navigator as Navigator & { deviceMemory?: number };
   const cores = navigator.hardwareConcurrency || 4;
   const memory = nav.deviceMemory ?? 4;
-  const pixels = window.innerWidth * window.innerHeight * Math.max(1, window.devicePixelRatio);
+  const dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+  const framebufferPixels = window.innerWidth * window.innerHeight * dpr * dpr;
   const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
 
-  if (memory <= 2 || cores <= 2 || pixels > 7_000_000) return 'low';
-  if (!coarsePointer && memory >= 8 && cores >= 8 && pixels < 5_000_000) return 'high';
+  // Never guess High from CPU/RAM alone. Auto can promote only after sustained
+  // measured frame health. This avoids over-driving integrated GPUs, high-DPI
+  // displays, and browsers that do not expose deviceMemory.
+  if (memory <= 2 || cores <= 4 || coarsePointer || framebufferPixels > 5_500_000) return 'low';
   return 'medium';
 }
 
@@ -80,6 +86,7 @@ export class QualityManager {
   setAuto(): void {
     this.#mode = 'auto';
     this.#resetStrikes();
+    this.#lastAdjustmentAt = -Infinity;
     this.#apply(initialAutoLevel());
   }
 
@@ -97,26 +104,31 @@ export class QualityManager {
     return this.#level;
   }
 
-  /**
-   * Adaptive quality with hysteresis:
-   * - downgrade after three sustained low-FPS reports;
-   * - upgrade only after 25 sustained high-FPS reports;
-   * - wait 30 seconds after any automatic change before changing again.
-   *
-   * This keeps Auto useful on changing devices while preventing profile flapping.
-   */
   observeFps(fps: number): QualityLevel {
+    const frameMs = fps > 0 ? 1000 / fps : Number.POSITIVE_INFINITY;
+    return this.#observe({ fps, p95FrameMs: frameMs, longFrameRate: 0 });
+  }
+
+  observePerformance(sample: FrameHealth): QualityLevel {
+    return this.#observe(sample);
+  }
+
+  #observe(sample: FrameHealth): QualityLevel {
+    const { fps, p95FrameMs, longFrameRate } = sample;
     if (this.#mode !== 'auto' || !Number.isFinite(fps) || fps <= 0) return this.#level;
 
-    const now = this.#now();
-    const cooldownActive = now - this.#lastAdjustmentAt < 30_000;
-    const lowThreshold = this.#level === 'high' ? 46 : 27;
-    const highThreshold = this.#level === 'low' ? 56 : 59;
+    const lowFpsThreshold = this.#level === 'high' ? 52 : 48;
+    const p95Budget = this.#level === 'high' ? 23 : 27;
+    const unhealthy = fps < lowFpsThreshold
+      || (Number.isFinite(p95FrameMs) && p95FrameMs > p95Budget)
+      || (Number.isFinite(longFrameRate) && longFrameRate > 0.06);
 
-    if (fps < lowThreshold && this.#level !== 'low') {
+    if (unhealthy && this.#level !== 'low') {
       this.#lowFpsStrikes += 1;
       this.#highFpsStrikes = 0;
-      if (!cooldownActive && this.#lowFpsStrikes >= 3) {
+      // Degradation is intentionally not cooldown-gated. If an upgrade hurts,
+      // Auto must recover within seconds instead of leaving the UI janky.
+      if (this.#lowFpsStrikes >= 2) {
         this.#resetStrikes();
         return this.degrade();
       }
@@ -124,9 +136,15 @@ export class QualityManager {
     }
 
     this.#lowFpsStrikes = 0;
-    if (fps >= highThreshold && this.#level !== 'high') {
+    const healthyFpsThreshold = this.#level === 'low' ? 56 : 58;
+    const healthy = fps >= healthyFpsThreshold
+      && (!Number.isFinite(p95FrameMs) || p95FrameMs <= 20)
+      && (!Number.isFinite(longFrameRate) || longFrameRate <= 0.025);
+    const upgradeCooldownActive = this.#now() - this.#lastAdjustmentAt < 20_000;
+
+    if (healthy && this.#level !== 'high' && !upgradeCooldownActive) {
       this.#highFpsStrikes += 1;
-      if (!cooldownActive && this.#highFpsStrikes >= 25) {
+      if (this.#highFpsStrikes >= 12) {
         this.#resetStrikes();
         return this.upgrade();
       }

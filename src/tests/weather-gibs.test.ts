@@ -28,7 +28,7 @@ describe('NASA GIBS weather helpers', () => {
     const timestamp = Date.parse('2026-09-14T10:17:00Z');
     expect(gibsRequestCandidates('clouds', timestamp)).toHaveLength(4);
     expect(gibsRequestCandidates('precipitation', timestamp)).toHaveLength(13);
-    expect(qualityToGibsResolution('low')).toEqual({ width: 1024, height: 512 });
-    expect(qualityToGibsResolution('high')).toEqual({ width: 2048, height: 1024 });
+    expect(qualityToGibsResolution('low')).toEqual({ width: 512, height: 256 });
+    expect(qualityToGibsResolution('high')).toEqual({ width: 1536, height: 768 });
   });
 });

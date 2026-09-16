@@ -107,7 +107,7 @@
 .runtime-health { border-radius: 0; background: transparent; }
 
 /* Briefings are a catalogue rather than a gallery of cards. */
-.briefing-launcher-layer { background: rgba(2,3,4,.76); backdrop-filter: blur(6px); }
+.briefing-launcher-layer { background: rgba(2,3,4,.76); backdrop-filter: none; }
 .briefing-launcher {
   width: min(780px, calc(100vw - 32px));
   border: 1px solid var(--se-line-strong);

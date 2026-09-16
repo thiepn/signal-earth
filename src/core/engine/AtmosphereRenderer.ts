@@ -133,6 +133,7 @@ export class AtmosphereRenderer implements SceneRenderer {
     const nextLevel = this.#context.getQualityLevel();
     const resolutionChanged = nextLevel !== this.#qualityLevel;
     this.#qualityLevel = nextLevel;
+    if (resolutionChanged) this.#createRasterMeshes(profile);
     this.#createHaze(profile);
     if (resolutionChanged) {
       this.#lastCloudKey = '';
@@ -165,8 +166,15 @@ export class AtmosphereRenderer implements SceneRenderer {
 
   #createRasterMeshes(profile: QualityProfile): void {
     if (!this.#context) return;
+    if (this.#cloudMesh?.parent) this.#cloudMesh.parent.remove(this.#cloudMesh);
+    if (this.#precipMesh?.parent) this.#precipMesh.parent.remove(this.#precipMesh);
+    this.#cloudGeometry?.dispose();
+    this.#cloudMaterial?.dispose();
+    this.#precipGeometry?.dispose();
+    this.#precipMaterial?.dispose();
     const radius = this.#context.globe.getGlobeRadius();
-    const segments: [number, number] = profile.effects === 'enhanced' ? [160, 96] : profile.effects === 'normal' ? [112, 72] : [72, 48];
+    const segments: [number, number] = profile.effects === 'enhanced' ? [96, 60] : profile.effects === 'normal' ? [56, 36] : [24, 16];
+    const reducedCloudShader = profile.effects === 'reduced';
 
     const cloudGeometry = new THREE.SphereGeometry(radius * 1.006, segments[0], segments[1]);
     const cloudMaterial = new THREE.ShaderMaterial({
@@ -174,11 +182,17 @@ export class AtmosphereRenderer implements SceneRenderer {
       depthWrite: false,
       side: THREE.FrontSide,
       uniforms: {
-        uMap: { value: null },
+        uMap: { value: this.#cloudTexture },
         uOpacity: { value: this.#settings.opacity },
         uSunDirection: { value: new THREE.Vector3(1, 0, 0) },
       },
-      vertexShader: `
+      vertexShader: reducedCloudShader ? `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      ` : `
         varying vec2 vUv;
         varying vec3 vWorldNormal;
         void main() {
@@ -187,7 +201,18 @@ export class AtmosphereRenderer implements SceneRenderer {
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
-      fragmentShader: `
+      fragmentShader: reducedCloudShader ? `
+        uniform sampler2D uMap;
+        uniform float uOpacity;
+        varying vec2 vUv;
+        void main() {
+          vec4 sampleColor = texture2D(uMap, vUv);
+          float luminance = dot(sampleColor.rgb, vec3(0.25, 0.60, 0.15));
+          float coverage = sampleColor.a * smoothstep(0.04, 0.70, luminance);
+          if (coverage < 0.025) discard;
+          gl_FragColor = vec4(vec3(0.90, 0.94, 0.97), coverage * uOpacity * 0.78);
+        }
+      ` : `
         uniform sampler2D uMap;
         uniform float uOpacity;
         uniform vec3 uSunDirection;
@@ -216,6 +241,7 @@ export class AtmosphereRenderer implements SceneRenderer {
       side: THREE.FrontSide,
       opacity: this.#settings.opacity * 0.9,
       blending: THREE.NormalBlending,
+      map: this.#precipTexture,
     });
     const precipMesh = new THREE.Mesh(precipGeometry, precipMaterial);
     precipMesh.name = 'signal-earth-precipitation';
@@ -228,6 +254,7 @@ export class AtmosphereRenderer implements SceneRenderer {
     this.#precipGeometry = precipGeometry;
     this.#precipMaterial = precipMaterial;
     this.#precipMesh = precipMesh;
+    this.#syncVisibility();
   }
 
   #createHaze(profile: QualityProfile): void {
@@ -237,7 +264,7 @@ export class AtmosphereRenderer implements SceneRenderer {
     this.#hazeMaterial?.dispose();
 
     const radius = this.#context.globe.getGlobeRadius() * 1.028;
-    const segments: [number, number] = profile.effects === 'enhanced' ? [128, 80] : profile.effects === 'normal' ? [96, 60] : [64, 40];
+    const segments: [number, number] = profile.effects === 'enhanced' ? [96, 60] : profile.effects === 'normal' ? [64, 40] : [40, 28];
     const geometry = new THREE.SphereGeometry(radius, segments[0], segments[1]);
     const material = new THREE.ShaderMaterial({
       transparent: true,
@@ -281,6 +308,7 @@ export class AtmosphereRenderer implements SceneRenderer {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = 'signal-earth-atmosphere-glow';
     mesh.renderOrder = 2;
+    mesh.visible = profile.atmosphere !== 'basic';
     this.#context.scene.add(mesh);
     this.#hazeGeometry = geometry;
     this.#hazeMaterial = material;
@@ -291,7 +319,7 @@ export class AtmosphereRenderer implements SceneRenderer {
     if (this.#cloudMesh) this.#cloudMesh.visible = this.#enabled && this.#settings.clouds && Boolean(this.#cloudTexture);
     if (this.#precipMesh) this.#precipMesh.visible = this.#enabled && this.#settings.precipitation && Boolean(this.#precipTexture);
     this.#stormGroup.visible = this.#enabled && this.#settings.stormTracks;
-    if (this.#hazeMesh) this.#hazeMesh.visible = true;
+    if (this.#hazeMesh) this.#hazeMesh.visible = this.#qualityLevel !== 'low';
   }
 
   #updateSolar(force = false): void {

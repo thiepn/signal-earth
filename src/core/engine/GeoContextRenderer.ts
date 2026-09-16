@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import type { VisualMode } from '../../shared/types/layers';
 import { geoContextBand, selectGeoContextLabels, type GeoContextCountry, type GeoContextLabel } from '../../features/globe/geoContext';
 import type { GlobeRenderContext } from './globe.types';
@@ -23,6 +24,23 @@ function collectPoints(value: unknown, out: Array<[number, number]>): void {
   for (const item of value) collectPoints(item, out);
 }
 
+function collectRings(value: unknown, out: Array<Array<[number, number]>>): void {
+  if (!Array.isArray(value) || value.length === 0) return;
+  const first = value[0];
+  if (Array.isArray(first) && first.length >= 2 && typeof first[0] === 'number' && typeof first[1] === 'number') {
+    const ring: Array<[number, number]> = [];
+    for (const point of value) {
+      if (!Array.isArray(point) || point.length < 2) continue;
+      const lon = point[0];
+      const lat = point[1];
+      if (typeof lon === 'number' && typeof lat === 'number' && Number.isFinite(lon) && Number.isFinite(lat)) ring.push([lon, lat]);
+    }
+    if (ring.length >= 2) out.push(ring);
+    return;
+  }
+  for (const item of value) collectRings(item, out);
+}
+
 function representativePoint(feature: GeoJsonFeature): GeoContextCountry | null {
   const name = typeof feature.properties?.name === 'string' ? feature.properties.name.trim() : '';
   if (!name || !feature.geometry) return null;
@@ -44,9 +62,8 @@ function representativePoint(feature: GeoJsonFeature): GeoContextCountry | null 
   };
 }
 
-function strokeForMode(mode: VisualMode, reduced: boolean): string {
-  const alpha = reduced ? 0.08 : mode === 'wireframe' ? 0.34 : mode === 'signal' ? 0.22 : mode === 'night' ? 0.14 : 0.12;
-  return `rgba(158,231,255,${alpha})`;
+function strokeOpacity(mode: VisualMode, reduced: boolean): number {
+  return reduced ? 0.08 : mode === 'wireframe' ? 0.34 : mode === 'signal' ? 0.22 : mode === 'night' ? 0.14 : 0.12;
 }
 
 function labelColor(label: GeoContextLabel, mode: VisualMode): string {
@@ -64,6 +81,9 @@ export class GeoContextRenderer implements SceneRenderer {
   #context: GlobeRenderContext | null = null;
   #features: GeoJsonFeature[] = [];
   #countries: GeoContextCountry[] = [];
+  #countryLines: THREE.LineSegments<THREE.BufferGeometry, THREE.LineBasicMaterial> | null = null;
+  #countryLineGeometry: THREE.BufferGeometry | null = null;
+  #countryLineMaterial: THREE.LineBasicMaterial | null = null;
   #abort: AbortController | null = null;
   #lastLabelKey = '';
   #lastUpdateAt = -Infinity;
@@ -93,18 +113,19 @@ export class GeoContextRenderer implements SceneRenderer {
         return label.kind === 'city' ? `${label.name} · ${label.subtitle}` : label.name;
       })
       .labelResolution(this.#reduced ? 1 : 2)
-      .labelsTransitionDuration(180)
+      .labelsTransitionDuration(this.#reduced ? 0 : 180)
       .onLabelClick((value, event) => {
         event.preventDefault();
         event.stopPropagation();
         this.#onNavigate?.(value as GeoContextLabel);
-      });
+      })
+      .polygonsData([]);
     this.#syncStyle();
     this.#loadCountries();
   }
 
   update(timestamp: number): void {
-    if (!this.#context || timestamp - this.#lastUpdateAt < 300) return;
+    if (!this.#context || timestamp - this.#lastUpdateAt < 500) return;
     this.#lastUpdateAt = timestamp;
     this.#syncLabels();
   }
@@ -112,7 +133,9 @@ export class GeoContextRenderer implements SceneRenderer {
   applyQuality(profile: QualityProfile): void {
     this.#reduced = profile.effects === 'reduced';
     if (!this.#context) return;
-    this.#context.globe.labelResolution(this.#reduced ? 1 : 2);
+    this.#context.globe
+      .labelResolution(this.#reduced ? 1 : 2)
+      .labelsTransitionDuration(this.#reduced ? 0 : 180);
     this.#syncStyle();
     this.#lastLabelKey = '';
     this.#syncLabels();
@@ -126,9 +149,8 @@ export class GeoContextRenderer implements SceneRenderer {
   dispose(): void {
     this.#abort?.abort();
     this.#abort = null;
-    if (this.#context) {
-      this.#context.globe.labelsData([]).polygonsData([]);
-    }
+    if (this.#context) this.#context.globe.labelsData([]).polygonsData([]);
+    this.#disposeCountryLines();
     this.#features = [];
     this.#countries = [];
     this.#context = null;
@@ -151,7 +173,7 @@ export class GeoContextRenderer implements SceneRenderer {
           ? payload.features.filter((feature) => feature.geometry?.type === 'Polygon' || feature.geometry?.type === 'MultiPolygon')
           : [];
         this.#countries = this.#features.map(representativePoint).filter((country): country is GeoContextCountry => country !== null);
-        this.#context.globe.polygonsData(this.#features);
+        this.#rebuildCountryLines();
         this.#syncStyle();
         this.#lastLabelKey = '';
         this.#syncLabels();
@@ -161,18 +183,56 @@ export class GeoContextRenderer implements SceneRenderer {
       });
   }
 
+  #rebuildCountryLines(): void {
+    if (!this.#context) return;
+    this.#disposeCountryLines();
+    const positions: number[] = [];
+    for (const feature of this.#features) {
+      const rings: Array<Array<[number, number]>> = [];
+      collectRings(feature.geometry?.coordinates, rings);
+      for (const ring of rings) {
+        for (let index = 1; index < ring.length; index += 1) {
+          const [lonA, latA] = ring[index - 1]!;
+          const [lonB, latB] = ring[index]!;
+          const a = this.#context.globe.getCoords(latA, lonA, 0.0015);
+          const b = this.#context.globe.getCoords(latB, lonB, 0.0015);
+          positions.push(a.x, a.y, a.z, b.x, b.y, b.z);
+        }
+      }
+    }
+    if (!positions.length) return;
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    const material = new THREE.LineBasicMaterial({
+      color: 0x9ee7ff,
+      transparent: true,
+      opacity: strokeOpacity(this.#getVisualMode(), this.#reduced),
+      depthWrite: false,
+      toneMapped: false,
+    });
+    const lines = new THREE.LineSegments(geometry, material);
+    lines.name = 'signal-earth-country-boundaries';
+    lines.renderOrder = 2;
+    this.#context.scene.add(lines);
+    this.#countryLineGeometry = geometry;
+    this.#countryLineMaterial = material;
+    this.#countryLines = lines;
+  }
+
+  #disposeCountryLines(): void {
+    if (this.#countryLines?.parent) this.#countryLines.parent.remove(this.#countryLines);
+    this.#countryLineGeometry?.dispose();
+    this.#countryLineMaterial?.dispose();
+    this.#countryLines = null;
+    this.#countryLineGeometry = null;
+    this.#countryLineMaterial = null;
+  }
+
   #syncStyle(): void {
     if (!this.#context) return;
     const mode = this.#getVisualMode();
-    this.#context.globe
-      .polygonGeoJsonGeometry('geometry')
-      .polygonAltitude(0.001)
-      .polygonCapColor(() => 'rgba(0,0,0,0)')
-      .polygonSideColor(() => 'rgba(0,0,0,0)')
-      .polygonStrokeColor(() => strokeForMode(mode, this.#reduced))
-      .polygonLabel(() => '')
-      .polygonsTransitionDuration(0)
-      .labelColor((value) => labelColor(value as GeoContextLabel, mode));
+    if (this.#countryLineMaterial) this.#countryLineMaterial.opacity = strokeOpacity(mode, this.#reduced);
+    this.#context.globe.labelColor((value) => labelColor(value as GeoContextLabel, mode));
   }
 
   #syncLabels(): void {
@@ -183,7 +243,7 @@ export class GeoContextRenderer implements SceneRenderer {
     if (key === this.#lastLabelKey) return;
     this.#lastLabelKey = key;
     let labels = selectGeoContextLabels(this.#countries, pointOfView);
-    if (this.#reduced) labels = labels.filter((label) => label.kind === 'country').slice(0, 18);
+    if (this.#reduced) labels = [];
     this.#context.globe.labelsData(labels);
   }
 }

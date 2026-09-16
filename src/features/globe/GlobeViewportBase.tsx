@@ -153,12 +153,12 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
   }, [props.reducedMotion]);
   useEffect(() => { seismicRef.current?.setEarthquakes(props.earthquakes); }, [props.earthquakes]);
   useEffect(() => { seismicRef.current?.setEnabled(props.earthquakesEnabled); }, [props.earthquakesEnabled]);
-  useEffect(() => { seismicRef.current?.setSimulationTime(props.simulationTime); }, [props.simulationTime]);
+  useEffect(() => { if (props.earthquakesEnabled) seismicRef.current?.setSimulationTime(props.simulationTime); }, [props.earthquakesEnabled, props.simulationTime]);
   useEffect(() => { seismicRef.current?.setSelected(props.selectedEntityId); }, [props.selectedEntityId]);
   useEffect(() => { naturalEventsRef.current?.setEvents(props.naturalEvents); }, [props.naturalEvents]);
   useEffect(() => { naturalEventsRef.current?.setEnabled(props.naturalEventsEnabled); }, [props.naturalEventsEnabled]);
   useEffect(() => { naturalEventsRef.current?.setActiveCategories(props.activeNaturalEventCategories); }, [props.activeNaturalEventCategories]);
-  useEffect(() => { naturalEventsRef.current?.setSimulationTime(props.simulationTime); }, [props.simulationTime]);
+  useEffect(() => { if (props.naturalEventsEnabled) naturalEventsRef.current?.setSimulationTime(props.simulationTime); }, [props.naturalEventsEnabled, props.simulationTime]);
   useEffect(() => { naturalEventsRef.current?.setSelected(props.selectedEntityId); }, [props.selectedEntityId]);
   useEffect(() => { atmosphereRef.current?.setEnabled(props.weatherEnabled); }, [props.weatherEnabled]);
   useEffect(() => { atmosphereRef.current?.setSettings(props.weatherSettings); }, [props.weatherSettings]);
@@ -166,7 +166,7 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
 
   useEffect(() => { auroraRef.current?.setModel(props.auroraModel); }, [props.auroraModel]);
   useEffect(() => { auroraRef.current?.setEnabled(props.auroraEnabled); }, [props.auroraEnabled]);
-  useEffect(() => { auroraRef.current?.setSimulationTime(props.simulationTime); }, [props.simulationTime]);
+  useEffect(() => { if (props.auroraEnabled) auroraRef.current?.setSimulationTime(props.simulationTime); }, [props.auroraEnabled, props.simulationTime]);
   useEffect(() => { auroraRef.current?.setHemispheres(props.auroraHemispheres); }, [props.auroraHemispheres]);
   useEffect(() => {
     auroraRef.current?.setVisualMode(props.visualMode);
