@@ -96,7 +96,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          EXISTING_TARGET="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" --jq '.object.sha' 2>/dev/null || true)"
+          EXISTING_TARGET=""
+          if TAG_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" 2>/dev/null)"; then
+            EXISTING_TARGET="$(jq -r '.object.sha' <<<"$TAG_JSON")"
+          fi
           if [[ -n "$EXISTING_TARGET" && "$EXISTING_TARGET" != "$SHA" ]]; then
             echo "Tag ${TAG} already points to ${EXISTING_TARGET}, expected ${SHA}." >&2
             exit 1
