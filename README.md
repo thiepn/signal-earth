@@ -6,13 +6,17 @@ Signal Earth is a static, browser-first observatory for Earth events, atmosphere
 
 ## Current status
 
-**Signal Earth 2.0.1 — post-release stabilization** is the current production release on GitHub Pages.
+**Signal Earth 2.1.0 — Observatory visual overhaul** is the current production release on GitHub Pages.
 
 Live deployment: **https://thiepn.dev/signal-earth/**
 
 The final product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Time 2.0 replay, Observatory UX 2.0, deterministic Signal Intelligence, Above Me 2.0, Orbit 2.0, Dynamic Briefings 2.0, Saved Worlds, shareable views, capture/recording, PWA/offline-shell support, progressive loading, cross-browser interaction hardening, Data Reliability 2.0, the Visual & Motion Finish presentation layer, Phase 29 release hardening, and Phase 30 exact-commit release closure.
 
-Version **2.0.1** is the current stable release. Its canonical GitHub Release is published only after the exact production SHA passes Verify Release, 7/7 Cross-browser QA and GitHub Pages deployment.
+Version **2.1.0** is the current stable release. Its canonical GitHub Release is published only after the exact production SHA passes Verify Release, 7/7 Cross-browser QA and GitHub Pages deployment.
+
+## 2.1.0 Observatory visual overhaul
+
+Signal Earth 2.1 replaces the accumulated glass-dashboard presentation layer with a quieter observatory instrument system while preserving the full 2.0 data, time, orbit, reliability, offline and persistence behavior. The globe is visually dominant; side panels, timeline, Search, Briefings, Settings, Above Me and the mobile dock now use crisp rules, flatter surfaces, restrained colour, readable hierarchy and far less decorative motion. See [`docs/RELEASE-2.1.0.md`](docs/RELEASE-2.1.0.md).
 
 ## 2.0.1 stabilization
 

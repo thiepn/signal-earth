@@ -11,6 +11,8 @@ import './ui/styles/phase24.css';
 import './ui/styles/phase26.css';
 import './ui/styles/phase27.css';
 import './ui/styles/phase28.css';
+import './ui/styles/observatory.css';
+import './ui/styles/observatory-components.css';
 import { registerSignalEarthServiceWorker } from './core/release/serviceWorker';
 
 const root = document.getElementById('root');

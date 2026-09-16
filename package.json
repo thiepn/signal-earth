@@ -1,7 +1,7 @@
 {
   "name": "signal-earth",
   "private": true,
-  "version": "2.0.1",
+  "version": "2.1.0",
   "type": "module",
   "description": "A time-aware browser observatory for Earth, orbit, space weather, and the observer.",
   "packageManager": "npm@10.9.8",

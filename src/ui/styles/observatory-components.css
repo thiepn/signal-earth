@@ -1,0 +1,243 @@
+/* Signal Earth 2.1 — component-level visual refinement. */
+
+/* Keep mutually exclusive overlays anchored to their intended edges. */
+.desktop-here { left: auto; right: 16px; }
+.desktop-now { left: 16px; right: auto; }
+
+/* Settings read as one continuous technical sheet. */
+.settings-content { padding: 0 12px 12px; }
+.settings-section { padding: 16px 0; border-top-color: var(--se-line); }
+.settings-section__heading { gap: 14px; }
+.settings-section__heading strong {
+  color: var(--se-text-soft);
+  font-size: .75rem;
+  font-weight: 590;
+}
+.settings-section__heading span:not(.quality-pill) { color: var(--se-dim); font-size: .64rem; }
+.segmented-control {
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--se-line-strong);
+  border-radius: 0;
+  background: transparent;
+}
+.segmented-control button {
+  min-height: 34px;
+  border: 0;
+  border-right: 1px solid var(--se-line);
+  border-radius: 0;
+  font-size: .66rem;
+}
+.segmented-control button:last-child { border-right: 0; }
+.segmented-control button.is-active {
+  color: var(--se-text);
+  background: rgba(169,199,212,.06);
+  box-shadow: inset 0 -2px 0 var(--se-accent);
+}
+
+/* Visual mode selector should look like a plate index, not product cards. */
+.visual-mode-grid { gap: 0; border-top: 1px solid var(--se-line-strong); }
+.visual-mode-card {
+  min-height: 62px;
+  border: 0;
+  border-bottom: 1px solid var(--se-line);
+  border-radius: 0;
+  background: transparent;
+}
+.visual-mode-card.is-active {
+  border-color: var(--se-line);
+  background: linear-gradient(90deg, rgba(169,199,212,.07), transparent 78%) !important;
+  box-shadow: inset 2px 0 0 var(--se-accent) !important;
+}
+.visual-mode-card__swatch { border-radius: 0; box-shadow: none; }
+
+/* Above Me becomes a field notebook: separate sections with rules only. */
+.desktop-here .panel-surface { border-radius: 0; }
+.desktop-here__scroll { padding: 0 12px 12px; }
+.above-me-controls { gap: 0; }
+.above-me-controls section {
+  padding: 14px 0;
+  border: 0;
+  border-bottom: 1px solid var(--se-line);
+  border-radius: 0;
+  background: transparent;
+}
+.above-me-controls section:last-child { border-bottom: 0; }
+.above-me-section-head strong { font-family: var(--se-display); font-size: .9rem; font-weight: 500; }
+.location-card,
+.weather-card,
+.sky-card,
+.pass-card { border-radius: 0; background: transparent; box-shadow: none; }
+.horizon-sky { border-color: var(--se-line-strong); border-radius: 50%; box-shadow: none; }
+
+/* Signal Earth Now: editorial feed rows. */
+.desktop-now__scroll { padding: 0 0 9px; }
+.now-feed-intro {
+  padding: 11px 12px 12px;
+  border-bottom: 1px solid var(--se-line);
+}
+.now-feed-intro strong { font-family: var(--se-display); font-size: .92rem; font-weight: 500; }
+.now-feed-note { margin: 0; padding: 10px 12px; border-top: 1px solid var(--se-line); }
+.now-signal {
+  margin: 0;
+  padding: 12px;
+  border-top: 0;
+  border-bottom: 1px solid var(--se-line);
+}
+.now-signal__rank,
+.now-signal__score { border-radius: 0; background: transparent; box-shadow: none; }
+.now-signal__title { font-family: var(--se-display); font-weight: 500; letter-spacing: -.01em; }
+
+/* Provider health is a status table, not a set of cards. */
+.provider-health-list { gap: 0; border-top: 1px solid var(--se-line-strong); }
+.provider-health-row {
+  border: 0;
+  border-bottom: 1px solid var(--se-line);
+  padding: 10px 4px;
+}
+.provider-health-row:last-child { border-bottom: 0; }
+.provider-health-metrics { color: var(--se-muted); }
+.runtime-notes span {
+  padding: 7px 0;
+  border: 0;
+  border-bottom: 1px solid rgba(216,186,125,.16);
+  border-radius: 0;
+  background: transparent;
+}
+.runtime-health { border-radius: 0; background: transparent; }
+
+/* Briefings are a catalogue rather than a gallery of cards. */
+.briefing-launcher-layer { background: rgba(2,3,4,.76); backdrop-filter: blur(6px); }
+.briefing-launcher {
+  width: min(780px, calc(100vw - 32px));
+  border: 1px solid var(--se-line-strong);
+  border-radius: 2px;
+  background: rgba(8,10,11,.985);
+  box-shadow: 0 30px 100px rgba(0,0,0,.58);
+}
+.briefing-launcher__header {
+  background: rgba(8,10,11,.97);
+  border-bottom: 1px solid var(--se-line-strong);
+}
+.briefing-launcher__intro { padding: 12px 16px 15px; }
+.briefing-grid { gap: 0; padding: 0; border-top: 1px solid var(--se-line); }
+.briefing-card {
+  min-height: 106px;
+  border: 0;
+  border-bottom: 1px solid var(--se-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.briefing-card:hover { background: linear-gradient(90deg, rgba(169,199,212,.055), transparent 80%); transform: none; }
+.briefing-card__copy small { color: var(--se-muted); font-family: var(--se-font); letter-spacing: .07em; }
+.briefing-card__copy strong { font-family: var(--se-display); font-size: 1rem; font-weight: 500; }
+.briefing-launcher__motion-note {
+  margin: 0;
+  padding: 11px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--se-line);
+  border-radius: 0;
+  background: transparent;
+}
+.briefing-overlay {
+  border-radius: 0;
+  background: rgba(7,9,10,.94);
+  box-shadow: none;
+}
+
+/* Data-control modules use open sections and simple toggles. */
+.weather-controls,
+.earthquake-controls,
+.natural-event-controls,
+.orbit-controls,
+.space-weather-controls {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.weather-control-section,
+.earthquake-control-section,
+.event-control-section,
+.orbit-control-section,
+.space-weather-section {
+  border-radius: 0;
+  background: transparent;
+}
+.event-category-grid,
+.orbit-category-grid { gap: 0; }
+.event-category-grid button,
+.orbit-category-grid button,
+.weather-chip,
+.aurora-hemisphere-toggle {
+  border-color: var(--se-line);
+  background: transparent;
+  box-shadow: none;
+}
+.event-category-grid button.is-active,
+.orbit-category-grid button.is-active,
+.weather-chip.is-active,
+.aurora-hemisphere-toggle.is-active {
+  border-color: var(--se-line-strong);
+  background: rgba(169,199,212,.055);
+  box-shadow: inset 0 -2px 0 var(--se-accent);
+}
+
+/* Inspector action strips stay utilitarian. */
+.inspector-actions,
+.orbit-inspector-actions { gap: 4px; }
+.orbit-context-actions,
+.orbit-trail-segments { gap: 0; }
+.orbit-context-actions button,
+.orbit-trail-segments button {
+  border-color: var(--se-line);
+  border-radius: 0;
+  background: transparent;
+}
+.orbit-context-actions button + button,
+.orbit-trail-segments button + button { border-left: 0; }
+.orbit-context-actions button.is-active,
+.orbit-trail-segments button.is-active { background: rgba(169,199,212,.06); box-shadow: inset 0 -2px 0 var(--se-accent); }
+.orbit-state-strip {
+  border: 0;
+  border-top: 1px solid var(--se-line-strong);
+  border-bottom: 1px solid var(--se-line);
+  background: transparent;
+}
+
+/* Search metadata and examples should not become another chip cloud. */
+.command-examples { gap: 0; border-top: 1px solid var(--se-line); }
+.command-examples button {
+  border: 0;
+  border-right: 1px solid var(--se-line);
+  border-radius: 0;
+  background: transparent;
+}
+.command-examples button:last-child { border-right: 0; }
+.search-result-kind { border: 0; border-right: 1px solid var(--se-line); border-radius: 0; background: transparent; }
+
+/* Small system labels stay readable instead of decorative microtype. */
+.source-strip,
+.quake-meta-line,
+.briefing-card__time,
+.provider-health-metrics,
+.runtime-notes span,
+.panel-note { font-size: max(.6rem, 10px); }
+.interaction-hint { color: rgba(180,188,184,.48); font-size: .52rem; letter-spacing: .035em; }
+
+@media (max-width: 900px) and (min-width: 761px) {
+  .desktop-left { left: 10px; width: 258px; }
+  .desktop-right { right: 10px; width: 270px; }
+  .desktop-here { right: 10px; }
+  .desktop-now { left: 10px; }
+  .desktop-timeline { width: min(760px, calc(100vw - 550px)); }
+}
+
+@media (max-width: 760px) {
+  .briefing-launcher-layer { padding: 56px 0 calc(58px + env(safe-area-inset-bottom)); align-items: end; }
+  .briefing-launcher { width: 100%; max-height: calc(100dvh - 114px - env(safe-area-inset-bottom)); border-left: 0; border-right: 0; border-bottom: 0; border-radius: 0; }
+  .briefing-grid { grid-template-columns: 1fr; }
+  .briefing-card { min-height: 104px; }
+  .above-me-controls section { padding: 13px 0; }
+}

@@ -109,16 +109,17 @@ export function LayerPanel({ layers, onToggle, weather, earthquake, naturalEvent
 
   const focused = LAYERS.find((layer) => layer.id === focusedLayer) ?? LAYERS[0]!;
   const focusedEnabled = layers[focusedLayer];
+  const activeLayerCount = Object.values(layers).filter(Boolean).length;
 
   return (
     <div className={compact ? 'layer-panel layer-panel--compact' : 'layer-panel panel-surface'}>
       {!compact && (
         <header className="panel-header layer-panel__header">
           <div>
-            <div className="panel-eyebrow">SIGNALS</div>
-            <h2>Explore layers</h2>
+            <div className="panel-eyebrow">Signals</div>
+            <h2>Layers</h2>
           </div>
-          <span className="panel-count">{Object.values(layers).filter(Boolean).length}/5 ON</span>
+          <span className="panel-count">{activeLayerCount} active</span>
         </header>
       )}
 
@@ -158,8 +159,8 @@ export function LayerPanel({ layers, onToggle, weather, earthquake, naturalEvent
 
       <div id={`layer-controls-${focusedLayer}`} className="layer-context-controls" aria-live="polite">
         <div className="layer-context-controls__head">
-          <span className="panel-eyebrow">{focused.label.toUpperCase()}</span>
-          <span>{focusedEnabled ? 'VISIBLE' : 'HIDDEN'}</span>
+          <span className="panel-eyebrow">{focused.label}</span>
+          <span>{focusedEnabled ? 'Visible' : 'Hidden'}</span>
         </div>
 
         {!focusedEnabled && (
@@ -177,7 +178,7 @@ export function LayerPanel({ layers, onToggle, weather, earthquake, naturalEvent
         <SpaceWeatherControls enabled={focusedLayer === 'aurora' && layers.aurora} {...spaceWeather} />
       </div>
 
-      {!compact && <p className="panel-note">Select a layer for controls. Observed, near-real-time, propagated and forecast semantics remain distinct.</p>}
+      {!compact && <p className="panel-note">Select a layer to inspect its controls. Observed, near-real-time, propagated and forecast data remain explicitly distinct.</p>}
     </div>
   );
 }

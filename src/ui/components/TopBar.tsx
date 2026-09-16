@@ -35,16 +35,16 @@ export function TopBar({ ready, pointOfView, clock, visualMode, onNow, onSearch,
       <button className="brand" type="button" onClick={onReset} aria-label="Reset Signal Earth globe">
         <span className="brand-mark" aria-hidden="true"><span /></span>
         <span className="brand-copy">
-          <strong>SIGNAL EARTH</strong>
-          <small>OBSERVATORY · {APP_VERSION}</small>
+          <strong>Signal Earth</strong>
+          <small>Earth observatory · v{APP_VERSION}</small>
         </span>
       </button>
 
       <div className="top-bar__center" aria-label="Current globe view">
         <span>{formatCoordinate(pointOfView.lat, 'N', 'S')}</span>
         <span>{formatCoordinate(pointOfView.lng, 'E', 'W')}</span>
-        <span className="top-bar__alt">ALT {pointOfView.altitude.toFixed(2)}R</span>
-        <span className="top-bar__mode">{visualMode.toUpperCase()}</span>
+        <span className="top-bar__alt">{pointOfView.altitude.toFixed(2)}R</span>
+        <span className="top-bar__mode">{visualMode}</span>
       </div>
 
       <div className="top-bar__actions">
@@ -65,14 +65,14 @@ export function TopBar({ ready, pointOfView, clock, visualMode, onNow, onSearch,
 
         <div className="top-secondary-actions" aria-label="Observatory tools">
           <button className="top-action top-action--secondary" type="button" onClick={onBriefings} aria-label="Open planetary briefings">
-            <span aria-hidden="true">▶</span><span className="top-action__label">Brief</span>
+            <span aria-hidden="true">↗</span><span className="top-action__label">Briefings</span>
           </button>
           <button className="top-action top-action--secondary" type="button" onClick={onHere} aria-label="Open Above Me">
-            <span aria-hidden="true">⌖</span><span className="top-action__label">Here</span>
+            <span aria-hidden="true">⌖</span><span className="top-action__label">Above me</span>
           </button>
         </div>
 
-        <button className="icon-button top-settings-button" type="button" onClick={onSettings} aria-label="Open settings">⋯</button>
+        <button className="icon-button top-settings-button" type="button" onClick={onSettings} aria-label="Open settings">···</button>
       </div>
     </header>
   );
