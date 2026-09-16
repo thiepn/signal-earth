@@ -45,6 +45,14 @@ function validTimestamp(value: number | undefined, now: number, maxFutureSkewMs:
   return value === undefined || (Number.isFinite(value) && value >= 0 && value <= now + maxFutureSkewMs);
 }
 
+function providerDataValid<T>(config: ReliableLoadConfig<unknown, T>, value: T): boolean {
+  try {
+    return config.provider.validate(value);
+  } catch {
+    return false;
+  }
+}
+
 function cacheEntryValid<T>(entry: CacheEntry<T>, config: ReliableLoadConfig<unknown, T>, now: number): boolean {
   return entry.provider === config.provider.id
     && entry.schemaVersion === config.cacheSchemaVersion
@@ -55,7 +63,7 @@ function cacheEntryValid<T>(entry: CacheEntry<T>, config: ReliableLoadConfig<unk
     && entry.fetchedAt <= now + MAX_CLOCK_SKEW_MS
     && entry.expiresAt >= entry.fetchedAt
     && validTimestamp(entry.sourceUpdatedAt, now, config.maxSourceFutureSkewMs ?? MAX_CLOCK_SKEW_MS)
-    && config.provider.validate(entry.value);
+    && providerDataValid(config, entry.value);
 }
 
 function normalizeProviderError(error: unknown, providerName: string): ReliabilityError {
@@ -82,7 +90,9 @@ async function fetchValidated<TRaw, TNormalized>(config: ReliableLoadConfig<TRaw
     try {
       const raw = await config.provider.fetchRaw(signal);
       const data = config.provider.normalize(raw);
-      if (!config.provider.validate(data)) {
+      let valid = false;
+      try { valid = config.provider.validate(data); } catch { valid = false; }
+      if (!valid) {
         throw new ReliabilityError(`${config.provider.source.name} returned a payload that failed validation.`, { kind: 'validation' });
       }
       const sourceUpdatedAt = config.sourceUpdatedAt(data);
@@ -113,8 +123,9 @@ export async function loadReliableSnapshot<TRaw, TNormalized>(config: ReliableLo
   const startedAt = Date.now();
   const now = startedAt;
   providerHealthRegistry.markAttempt(provider.id, startedAt);
+  const untypedConfig = config as ReliableLoadConfig<unknown, TNormalized>;
 
-  if (!options.forceRefresh && config.memory && now - config.memory.fetchedAt <= provider.cachePolicy.ttlMs && provider.validate(config.memory.data)) {
+  if (!options.forceRefresh && config.memory && now - config.memory.fetchedAt <= provider.cachePolicy.ttlMs && providerDataValid(untypedConfig, config.memory.data)) {
     const snapshot = memorySnapshot(config.memory, config.memory.freshness === 'stale' ? 'stale' : 'cached');
     config.setMemory(snapshot);
     providerHealthRegistry.markSuccess(provider.id, {
@@ -131,17 +142,18 @@ export async function loadReliableSnapshot<TRaw, TNormalized>(config: ReliableLo
   let cacheRecovered = false;
   try {
     cached = await config.cache.get<TNormalized>(config.cacheKey);
-    if (cached && !cacheEntryValid(cached, config as ReliableLoadConfig<unknown, TNormalized>, now)) {
+    if (cached && !cacheEntryValid(cached, untypedConfig, now)) {
       cacheRecovered = true;
       cached = undefined;
       try { await config.cache.delete(config.cacheKey); } catch { /* cache recovery is best-effort */ }
     }
   } catch {
+    cached = undefined;
     // IndexedDB may be unavailable in privacy modes; network remains authoritative.
   }
 
   if (!options.forceRefresh && cached && now <= cached.expiresAt) {
-    const snapshot = cachedSnapshot(cached, config as ReliableLoadConfig<unknown, TNormalized>, 'cached');
+    const snapshot = cachedSnapshot(cached, untypedConfig, 'cached');
     config.setMemory(snapshot);
     providerHealthRegistry.markSuccess(provider.id, {
       freshness: 'cached',
@@ -197,7 +209,7 @@ export async function loadReliableSnapshot<TRaw, TNormalized>(config: ReliableLo
     const detail = `${failure.message} Using the newest valid local fallback.`;
 
     if (cached && now - cached.fetchedAt <= provider.cachePolicy.staleForMs) {
-      const snapshot = cachedSnapshot(cached, config as ReliableLoadConfig<unknown, TNormalized>, 'stale');
+      const snapshot = cachedSnapshot(cached, untypedConfig, 'stale');
       config.setMemory(snapshot);
       providerHealthRegistry.markFallback(provider.id, {
         freshness: 'stale',
@@ -210,7 +222,7 @@ export async function loadReliableSnapshot<TRaw, TNormalized>(config: ReliableLo
       return snapshot;
     }
 
-    if (config.memory && now - config.memory.fetchedAt <= provider.cachePolicy.staleForMs && provider.validate(config.memory.data)) {
+    if (config.memory && now - config.memory.fetchedAt <= provider.cachePolicy.staleForMs && providerDataValid(untypedConfig, config.memory.data)) {
       const snapshot = memorySnapshot(config.memory, 'stale');
       config.setMemory(snapshot);
       providerHealthRegistry.markFallback(provider.id, {
