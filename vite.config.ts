@@ -13,6 +13,9 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
-    sourcemap: true,
+    // Phase 29 ships the static production artifact without source maps. The
+    // application has no production error-ingestion service that consumes them,
+    // and publishing them would expose several megabytes of source unnecessarily.
+    sourcemap: false,
   },
 });
