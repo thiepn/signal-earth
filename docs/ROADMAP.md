@@ -178,7 +178,14 @@ Final design-system closure without a redesign: unified typography and spacing h
 
 Phase 28 is deliberately presentation-only. It does not change data providers, scientific semantics, storage schemas, product workflows or startup JavaScript architecture.
 
-## Next planned phases
+## Phase 29 — Release Hardening
 
-- **Phase 29 — Release Hardening:** comprehensive final audit, defect closure, packaging and release-candidate certification.
-- **Phase 30 — Signal Earth 2.0:** final production promotion and release closure.
+Status: **implemented and release-candidate certified**.
+
+Signal Earth **2.0.0-rc.1** closes the final technical release risks before production promotion: lockfile-backed `npm ci`, pinned Node/npm and immutable GitHub Actions inputs, build-embedded release/version/commit metadata, release-versioned service-worker caches with safe upgrade lifecycle, awaited runtime cache writes, production source-map removal, stronger package/PWA/precache verification, an explicit release-candidate integrity gate, retained digest-addressable certified artifacts and release-identity E2E coverage inside the permanent seven-project browser/device matrix.
+
+The candidate is certified without changing providers, scientific semantics, persistence schemas or product workflows. Final `2.0.0` promotion remains a separate release-closure step.
+
+## Next planned phase
+
+- **Phase 30 — Signal Earth 2.0:** final production promotion, live verification and release closure.
