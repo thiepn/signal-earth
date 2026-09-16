@@ -22,6 +22,7 @@ function response(): Response {
 describe('country search loading', () => {
   beforeEach(() => {
     vi.resetModules();
+    vi.stubGlobal('document', { baseURI: 'https://signal-earth.test/' });
   });
 
   afterEach(() => {
@@ -56,11 +57,12 @@ describe('country search loading', () => {
 
     const controller = new AbortController();
     const cancelled = loadSearchCountries(controller.signal);
+    const cancelledExpectation = expect(cancelled).rejects.toMatchObject({ name: 'AbortError' });
     const active = loadSearchCountries();
     controller.abort();
     resolveFetch(response());
 
-    await expect(cancelled).rejects.toMatchObject({ name: 'AbortError' });
+    await cancelledExpectation;
     await expect(active).resolves.toHaveLength(1);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
