@@ -164,7 +164,7 @@ Seven-project Playwright production matrix across Chromium/Firefox/WebKit plus d
 
 ## Phase 27 — Data Reliability 2.0
 
-Status: **implemented on `phase27-data-reliability`; release certification in progress**.
+Status: **implemented and certified**.
 
 One shared reliability contract for USGS, NASA EONET, CelesTrak, NOAA SWPC and Open-Meteo: validated memory/IndexedDB/network/stale fallback flow, request coalescing with independent caller cancellation, bounded deterministic retry/backoff, rate-limit classification, offline short-circuiting, corrupt-cache recovery, source-timestamp auditing, partial-provider preservation, live provider-health diagnostics and dedicated reliability regression tests.
 
