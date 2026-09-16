@@ -1,6 +1,6 @@
 import { DataCache, type CacheEntry } from './DataCache';
 import type { DataSnapshot, ProviderAdapter } from './ProviderAdapter';
-import { providerHealthRegistry, ReliabilityError, RequestCoordinator, describeReliabilityFailure, isAbortError } from './reliability';
+import { abortableDelay, providerHealthRegistry, ReliabilityError, RequestCoordinator, describeReliabilityFailure, isAbortError } from './reliability';
 import type { ExternalProviderId } from './reliability';
 
 const MAX_CLOCK_SKEW_MS = 10 * 60_000;
@@ -58,9 +58,25 @@ function cacheEntryValid<T>(entry: CacheEntry<T>, config: ReliableLoadConfig<unk
     && config.provider.validate(entry.value);
 }
 
+function normalizeProviderError(error: unknown, providerName: string): ReliabilityError {
+  if (error instanceof ReliabilityError) return error;
+  const message = error instanceof Error ? error.message : String(error ?? `${providerName} request failed.`);
+  const match = message.match(/\((\d{3})\)/);
+  const status = match?.[1] ? Number(match[1]) : null;
+  if (status === 429) return new ReliabilityError(`${providerName} is rate-limiting requests (429).`, { kind: 'rate-limit', status, cause: error });
+  if (status !== null) return new ReliabilityError(message, { kind: 'http', status, cause: error });
+  return new ReliabilityError(message, { kind: 'network', cause: error });
+}
+
+function retryable(error: ReliabilityError): boolean {
+  if (error.kind === 'network' || error.kind === 'parse' || error.kind === 'validation' || error.kind === 'rate-limit') return true;
+  return error.kind === 'http' && (error.status === 408 || error.status === 425 || error.status === 500 || error.status === 502 || error.status === 503 || error.status === 504);
+}
+
 async function fetchValidated<TRaw, TNormalized>(config: ReliableLoadConfig<TRaw, TNormalized>, signal: AbortSignal): Promise<TNormalized> {
-  const attempts = Math.max(1, Math.min(2, config.validationAttempts ?? 2));
-  let lastError: unknown;
+  const attempts = Math.max(1, Math.min(3, config.validationAttempts ?? 3));
+  let lastError: ReliabilityError | null = null;
+
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     if (signal.aborted) throw new DOMException('Request aborted', 'AbortError');
     try {
@@ -76,11 +92,15 @@ async function fetchValidated<TRaw, TNormalized>(config: ReliableLoadConfig<TRaw
       return data;
     } catch (error) {
       if (isAbortError(error)) throw error;
-      lastError = error;
-      if (attempt === attempts - 1) throw error;
+      const normalized = normalizeProviderError(error, config.provider.source.name);
+      lastError = normalized;
+      if (!retryable(normalized) || attempt === attempts - 1) throw normalized;
+      const delayMs = normalized.retryAfterMs ?? Math.min(2_500, 250 * 2 ** attempt);
+      await abortableDelay(delayMs, signal);
     }
   }
-  throw lastError;
+
+  throw lastError ?? new ReliabilityError(`${config.provider.source.name} request failed.`, { kind: 'unknown' });
 }
 
 function healthDetailForCacheRecovery(recovered: boolean): string | null {
