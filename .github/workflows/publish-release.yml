@@ -1,0 +1,114 @@
+name: Publish Signal Earth Release
+
+on:
+  workflow_run:
+    workflows: ["Verify Release"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ github.event.workflow_run.head_sha }}
+      VERIFY_RUN_ID: ${{ github.event.workflow_run.id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Resolve stable release identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(jq -r '.version' package.json)"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Refusing to publish non-stable version: $VERSION" >&2
+            exit 1
+          fi
+          NOTES="docs/RELEASE-${VERSION}.md"
+          if [[ ! -f "$NOTES" ]]; then
+            echo "Missing release notes: $NOTES" >&2
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "TAG=v$VERSION" >> "$GITHUB_ENV"
+          echo "NOTES=$NOTES" >> "$GITHUB_ENV"
+
+      - name: Wait for production QA and deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 90); do
+            RUNS="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${SHA}&per_page=100")"
+            QA_STATUS="$(jq -r '[.workflow_runs[] | select(.name == "Cross-browser QA")] | sort_by(.run_number) | last | .status // "missing"' <<<"$RUNS")"
+            QA_RESULT="$(jq -r '[.workflow_runs[] | select(.name == "Cross-browser QA")] | sort_by(.run_number) | last | .conclusion // "pending"' <<<"$RUNS")"
+            DEPLOY_STATUS="$(jq -r '[.workflow_runs[] | select(.name == "Deploy Signal Earth")] | sort_by(.run_number) | last | .status // "missing"' <<<"$RUNS")"
+            DEPLOY_RESULT="$(jq -r '[.workflow_runs[] | select(.name == "Deploy Signal Earth")] | sort_by(.run_number) | last | .conclusion // "pending"' <<<"$RUNS")"
+
+            echo "QA: ${QA_STATUS}/${QA_RESULT} · Deploy: ${DEPLOY_STATUS}/${DEPLOY_RESULT}"
+
+            if [[ "$QA_STATUS" == "completed" && "$QA_RESULT" != "success" ]]; then
+              echo "Cross-browser QA did not pass for ${SHA}." >&2
+              exit 1
+            fi
+            if [[ "$DEPLOY_STATUS" == "completed" && "$DEPLOY_RESULT" != "success" ]]; then
+              echo "Deployment did not pass for ${SHA}." >&2
+              exit 1
+            fi
+            if [[ "$QA_RESULT" == "success" && "$DEPLOY_RESULT" == "success" ]]; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for QA/deployment for ${SHA}." >&2
+          exit 1
+
+      - name: Download certified production artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh run download "$VERIFY_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "signal-earth-${SHA}" --dir release-dist
+          test -f release-dist/index.html
+          test -f release-dist/release.json
+          test -f release-dist/sw.js
+          RELEASE_SHA="$(jq -r '.commit' release-dist/release.json)"
+          RELEASE_VERSION="$(jq -r '.version' release-dist/release.json)"
+          [[ "$RELEASE_SHA" == "$SHA" ]]
+          [[ "$RELEASE_VERSION" == "$VERSION" ]]
+
+      - name: Package certified artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd release-dist && zip -qry "../signal-earth-${VERSION}.zip" .)
+          sha256sum "signal-earth-${VERSION}.zip" > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Publish GitHub Release
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXISTING_TARGET="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" --jq '.object.sha' 2>/dev/null || true)"
+          if [[ -n "$EXISTING_TARGET" && "$EXISTING_TARGET" != "$SHA" ]]; then
+            echo "Tag ${TAG} already points to ${EXISTING_TARGET}, expected ${SHA}." >&2
+            exit 1
+          fi
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release ${TAG} already exists at the certified target; nothing to publish."
+            exit 0
+          fi
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$SHA" \
+            --title "Signal Earth ${VERSION}" \
+            --notes-file "$NOTES" \
+            "signal-earth-${VERSION}.zip#Certified production artifact" \
+            "SHA256SUMS.txt#SHA-256 checksum"
