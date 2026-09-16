@@ -1,4 +1,5 @@
 import { lazy, Suspense, type ComponentProps } from 'react';
+import { LazyFeatureBoundary } from '../components/LazyFeatureBoundary';
 
 type InspectorPanelProps = ComponentProps<(typeof import('./InspectorPanelImpl'))['InspectorPanel']>;
 
@@ -15,8 +16,10 @@ export function InspectorPanel(props: InspectorPanelProps) {
   }
 
   return (
-    <Suspense fallback={<div className={props.compact ? 'inspector-content' : 'inspector-panel panel-surface'}><div className="empty-state"><span className="empty-state__target" aria-hidden="true">◎</span><strong>Loading signal intelligence…</strong><p>The selected object stays active while its detailed inspector loads.</p></div></div>}>
-      <LazyInspectorPanel {...props} />
-    </Suspense>
+    <LazyFeatureBoundary featureName="Signal inspector" className={props.compact ? 'inspector-content' : 'inspector-panel panel-surface'}>
+      <Suspense fallback={<div className={props.compact ? 'inspector-content' : 'inspector-panel panel-surface'}><div className="empty-state"><span className="empty-state__target" aria-hidden="true">◎</span><strong>Loading signal intelligence…</strong><p>The selected object stays active while its detailed inspector loads.</p></div></div>}>
+        <LazyInspectorPanel {...props} />
+      </Suspense>
+    </LazyFeatureBoundary>
   );
 }
