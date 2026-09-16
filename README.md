@@ -6,11 +6,25 @@ Signal Earth is a static, browser-first observatory for Earth events, atmosphere
 
 ## Current status
 
-**Signal Earth v1.10.0 — Phase 25 Performance Architecture 2.0** is production-built and release-certified for GitHub Pages.
+**Signal Earth v1.11.0 — Phase 26 Real-World QA & Interaction Hardening** is production-built and release-certified for GitHub Pages.
 
 Live deployment: **https://thiepn.dev/signal-earth/**
 
-The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Time 2.0 replay, Observatory UX 2.0, deterministic Signal Intelligence, Above Me 2.0, Orbit 2.0, Dynamic Briefings 2.0, Saved Worlds, shareable views, capture/recording, PWA/offline-shell support, and the Phase 25 progressive-loading architecture.
+The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Time 2.0 replay, Observatory UX 2.0, deterministic Signal Intelligence, Above Me 2.0, Orbit 2.0, Dynamic Briefings 2.0, Saved Worlds, shareable views, capture/recording, PWA/offline-shell support, progressive loading, and the Phase 26 cross-browser interaction-hardening layer.
+
+## Real-World QA & Interaction Hardening
+
+Phase 26 turns browser interaction reliability into a maintained release surface rather than a one-off manual check.
+
+- Playwright production-build coverage spans Chromium, Firefox, WebKit, ultrawide desktop, Android/Chromium, iPhone/WebKit, and iPad/WebKit profiles.
+- The interaction suite exercises startup/viewport containment, Search and keyboard navigation, primary panels, Time controls, Saved Worlds, reduced motion, provider failure isolation, offline reopening, phone orientation changes, and deferred-module failure recovery.
+- Browser/device projects run on isolated CI runners so the WebGL observatory does not produce false failures from several concurrent globe renderers competing for one hosted-runner GPU/CPU budget.
+- Deferred Search, Display/Saved Worlds, Briefings, Above Me, Now, Inspector, and globe modules are wrapped in local error boundaries. A rejected optional chunk now leaves the observatory shell recoverable instead of taking down the React tree.
+- Natural Earth country-search indexing is single-flight cached: concurrent consumers share one request and one caller aborting does not cancel the shared load.
+- Globe material color transitions are hardened against transient/null Globe.gl material fields observed under WebKit, including the Earth → Night transition.
+- Mobile QA checks actual on-screen geometry and reachability rather than requiring a particular CSS positioning implementation.
+
+The automated phone/tablet projects are browser-device emulations. Physical-device visual/touch smoke testing remains a separate manual acceptance step.
 
 ## Performance Architecture 2.0
 
@@ -125,7 +139,9 @@ Saved Worlds stores up to 24 named browser-local observatory presets using the s
 - Saved Worlds stores public display state only and introduces no account/cloud backend
 - Phase 25 async chunks retain the same product/data trust boundaries as their pre-split implementations
 - lazy chunks and workers use service-worker runtime cache after first use rather than startup precache
-- `npm run release` now includes a startup-architecture performance regression gate
+- deferred UI failures are contained at feature boundaries rather than escalating to the whole React tree
+- `npm run release` includes startup-architecture performance regression checks
+- the cross-browser QA workflow validates production-build interactions independently from the unit/release gate
 
 ## Development
 
@@ -138,6 +154,12 @@ Release gate:
 
 ```bash
 npm run release
+```
+
+Cross-browser production QA:
+
+```bash
+npm run qa:e2e
 ```
 
 Individual checks:
@@ -166,3 +188,4 @@ Core documents live under [`docs/`](docs/). Phase acceptance records are maintai
 - [`docs/PHASE-23-ACCEPTANCE.md`](docs/PHASE-23-ACCEPTANCE.md) — Dynamic Briefings 2.0
 - [`docs/PHASE-24-ACCEPTANCE.md`](docs/PHASE-24-ACCEPTANCE.md) — Saved Worlds
 - [`docs/PHASE-25-ACCEPTANCE.md`](docs/PHASE-25-ACCEPTANCE.md) — Performance Architecture 2.0
+- [`docs/PHASE-26-ACCEPTANCE.md`](docs/PHASE-26-ACCEPTANCE.md) — Real-World QA & Interaction Hardening
