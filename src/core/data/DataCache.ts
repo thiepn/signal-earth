@@ -43,6 +43,11 @@ export class DataCache {
     await db.put('snapshots', entry as CacheEntry);
   }
 
+  async delete(key: string): Promise<void> {
+    const db = await this.#db();
+    await db.delete('snapshots', key);
+  }
+
   async clearProvider(provider: ProviderId): Promise<void> {
     const db = await this.#db();
     const tx = db.transaction('snapshots', 'readwrite');
