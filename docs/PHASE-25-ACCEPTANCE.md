@@ -87,6 +87,6 @@ The roughly 80% reduction applies specifically to the HTML-linked JavaScript gra
 - [x] **10** deferred JavaScript chunks, approximately **2,012.5 kB raw** combined.
 - [x] Startup service-worker precache: **24** shell assets.
 - [x] Certified production package: approximately **13.97 MB**.
-- [ ] Exact v1.10.0 final branch-head certification passes.
+- [x] Exact v1.10.0 final branch-head certification passes.
 - [ ] GitHub Pages production deployment succeeds.
 - [ ] Real-device visual smoke test remains a separate manual acceptance step.
