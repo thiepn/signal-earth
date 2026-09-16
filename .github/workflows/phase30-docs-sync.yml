@@ -1,0 +1,76 @@
+name: Phase 30 Docs Sync
+
+on:
+  push:
+    branches: [phase30-signal-earth-2.0]
+    paths:
+      - .github/workflows/phase30-docs-sync.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize-docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Finalize README and roadmap
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          readme = Path('README.md')
+          text = readme.read_text()
+          replacements = {
+              '**Signal Earth 2.0.0-rc.1 — Phase 29 Release Hardening** is production-built and release-candidate certified for GitHub Pages.':
+                  '**Signal Earth 2.0.0 — Phase 30 Signal Earth 2.0** is the final production release on GitHub Pages.',
+              'The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Time 2.0 replay, Observatory UX 2.0, deterministic Signal Intelligence, Above Me 2.0, Orbit 2.0, Dynamic Briefings 2.0, Saved Worlds, shareable views, capture/recording, PWA/offline-shell support, progressive loading, cross-browser interaction hardening, Data Reliability 2.0, the Visual & Motion Finish presentation layer, and the Phase 29 release-candidate hardening system.':
+                  'The final product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Time 2.0 replay, Observatory UX 2.0, deterministic Signal Intelligence, Above Me 2.0, Orbit 2.0, Dynamic Briefings 2.0, Saved Worlds, shareable views, capture/recording, PWA/offline-shell support, progressive loading, cross-browser interaction hardening, Data Reliability 2.0, the Visual & Motion Finish presentation layer, Phase 29 release hardening, and Phase 30 exact-commit release closure.',
+              'The final **2.0.0** production promotion is intentionally reserved for Phase 30.':
+                  'Version **2.0.0** is the stable release. The canonical `v2.0.0` GitHub Release is published only after the exact production SHA passes Verify Release, 7/7 Cross-browser QA and GitHub Pages deployment.',
+              '- `candidate:verify` audits version/lockfile/runtime/workflow/service-worker release invariants and is part of the normal `npm run release` gate.':
+                  '- `release:integrity` audits the stable version/lockfile/runtime/workflow/service-worker/publication invariants and rejects prerelease version suffixes in the final release path.',
+              'npm run candidate:verify': 'npm run release:integrity',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'Missing README replacement anchor: {old[:80]}')
+              text = text.replace(old, new, 1)
+
+          marker = '## Release Hardening\n'
+          phase30 = '''## Signal Earth 2.0 release closure\n\nPhase 30 promotes the certified release candidate to stable **2.0.0** and closes the roadmap without changing product or scientific behavior.\n\n- Package, lockfile, in-app version, `release.json` and service-worker cache identity use the same stable version.\n- The final integrity gate rejects prerelease suffixes and retains the reproducible Node/npm/action pinning introduced in Phase 29.\n- Cross-browser QA now runs for every exact release commit, including documentation-closure commits, because `release.json` embeds the exact Git SHA.\n- A gated publication workflow waits for Verify Release, 7/7 Cross-browser QA and Pages deployment on the same `main` SHA.\n- The publisher downloads the retained verified `dist` artifact instead of rebuilding, validates its version/SHA identity, packages it, emits a SHA-256 checksum and creates the immutable `v2.0.0` GitHub Release.\n- Canonical release notes live at [`docs/RELEASE-2.0.0.md`](docs/RELEASE-2.0.0.md).\n\n'''
+          if marker not in text:
+              raise SystemExit('Missing README Release Hardening marker')
+          text = text.replace(marker, phase30 + marker, 1)
+
+          phase29_line = '- [`docs/PHASE-29-ACCEPTANCE.md`](docs/PHASE-29-ACCEPTANCE.md) — Release Hardening / 2.0 release-candidate certification'
+          phase30_line = '- [`docs/PHASE-30-ACCEPTANCE.md`](docs/PHASE-30-ACCEPTANCE.md) — Signal Earth 2.0 final release closure'
+          if phase30_line not in text:
+              if phase29_line not in text:
+                  raise SystemExit('Missing README Phase 29 documentation anchor')
+              text = text.replace(phase29_line, phase29_line + '\n' + phase30_line, 1)
+          readme.write_text(text)
+
+          roadmap = Path('docs/ROADMAP.md')
+          road = roadmap.read_text()
+          old_tail = '''## Next planned phase\n\n- **Phase 30 — Signal Earth 2.0:** final production promotion, live verification and release closure.'''
+          new_tail = '''## Phase 30 — Signal Earth 2.0\n\nStatus: **implemented and shipped**.\n\nStable **2.0.0** promotion, stable-release integrity verification, exact-commit browser certification, canonical release notes, gated same-SHA production publication, retained-artifact packaging, SHA-256 release checksum, immutable `v2.0.0` tag/release creation and final GitHub Pages/live release closure.\n\nPhase 30 is release-only. It changes no providers, scientific semantics, persistence schemas, observer privacy rules or product workflows.\n\n## Roadmap status\n\nThe Signal Earth Phase 0–30 development roadmap is complete with **Signal Earth 2.0.0**. Future maintenance is versioned product maintenance rather than continuation of the 0–30 build roadmap.'''
+          if old_tail not in road:
+              raise SystemExit('Missing roadmap Phase 30 anchor')
+          roadmap.write_text(road.replace(old_tail, new_tail, 1))
+          PY
+      - name: Commit release documentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- README.md docs/ROADMAP.md; then
+            echo "Release documentation is already finalized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md docs/ROADMAP.md
+          git commit -m "docs: close Signal Earth 2.0 roadmap"
+          git push origin HEAD:phase30-signal-earth-2.0
