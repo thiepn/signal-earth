@@ -6,13 +6,24 @@ Signal Earth is a static, browser-first observatory for Earth events, atmosphere
 
 ## Current status
 
-**Signal Earth 2.0.0-rc.1 — Phase 29 Release Hardening** is production-built and release-candidate certified for GitHub Pages.
+**Signal Earth 2.0.0 — Phase 30 Signal Earth 2.0** is the final production release on GitHub Pages.
 
 Live deployment: **https://thiepn.dev/signal-earth/**
 
-The current product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Time 2.0 replay, Observatory UX 2.0, deterministic Signal Intelligence, Above Me 2.0, Orbit 2.0, Dynamic Briefings 2.0, Saved Worlds, shareable views, capture/recording, PWA/offline-shell support, progressive loading, cross-browser interaction hardening, Data Reliability 2.0, the Visual & Motion Finish presentation layer, and the Phase 29 release-candidate hardening system.
+The final product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Time 2.0 replay, Observatory UX 2.0, deterministic Signal Intelligence, Above Me 2.0, Orbit 2.0, Dynamic Briefings 2.0, Saved Worlds, shareable views, capture/recording, PWA/offline-shell support, progressive loading, cross-browser interaction hardening, Data Reliability 2.0, the Visual & Motion Finish presentation layer, Phase 29 release hardening, and Phase 30 exact-commit release closure.
 
-The final **2.0.0** production promotion is intentionally reserved for Phase 30.
+Version **2.0.0** is the stable release. The canonical `v2.0.0` GitHub Release is published only after the exact production SHA passes Verify Release, 7/7 Cross-browser QA and GitHub Pages deployment.
+
+## Signal Earth 2.0 release closure
+
+Phase 30 promotes the certified release candidate to stable **2.0.0** and closes the roadmap without changing product or scientific behavior.
+
+- Package, lockfile, in-app version, `release.json` and service-worker cache identity use the same stable version.
+- The final integrity gate rejects prerelease suffixes and retains the reproducible Node/npm/action pinning introduced in Phase 29.
+- Cross-browser QA now runs for every exact release commit, including documentation-closure commits, because `release.json` embeds the exact Git SHA.
+- A gated publication workflow waits for Verify Release, 7/7 Cross-browser QA and Pages deployment on the same `main` SHA.
+- The publisher downloads the retained verified `dist` artifact instead of rebuilding, validates its version/SHA identity, packages it, emits a SHA-256 checksum and creates the immutable `v2.0.0` GitHub Release.
+- Canonical release notes live at [`docs/RELEASE-2.0.0.md`](docs/RELEASE-2.0.0.md).
 
 ## Release Hardening
 
@@ -28,7 +39,7 @@ Phase 29 converts the completed product into a reproducible and auditable releas
 - Runtime service-worker cache writes are awaited, and obsolete Signal Earth caches are cleaned only when the replacement worker activates.
 - Production source maps are no longer deployed. The packaged site fell from roughly **14.02 MB** in Phase 28 to roughly **3.68 MB** without changing the application runtime architecture.
 - `release:verify` now audits the final package for required assets, PWA identity, GitHub-Pages-safe relative paths, release metadata, service-worker injection, startup-precache boundaries, source-map absence and an **8 MB** packaged-site ceiling.
-- `candidate:verify` audits version/lockfile/runtime/workflow/service-worker release invariants and is part of the normal `npm run release` gate.
+- `release:integrity` audits the stable version/lockfile/runtime/workflow/service-worker/publication invariants and rejects prerelease version suffixes in the final release path.
 - Verification retains the exact certified `dist` artifact for 14 days with a SHA-256 digest instead of discarding the runner output after testing.
 - Production E2E coverage now verifies that `release.json`, the generated service-worker cache version and the version shown inside Display → Release tools agree.
 
@@ -233,7 +244,7 @@ npm test
 npm run build
 npm run release:verify
 npm run performance:verify
-npm run candidate:verify
+npm run release:integrity
 ```
 
 ## Earth assets
@@ -256,3 +267,4 @@ Core documents live under [`docs/`](docs/). Phase acceptance records are maintai
 - [`docs/PHASE-27-ACCEPTANCE.md`](docs/PHASE-27-ACCEPTANCE.md) — Data Reliability 2.0
 - [`docs/PHASE-28-ACCEPTANCE.md`](docs/PHASE-28-ACCEPTANCE.md) — Visual & Motion Finish
 - [`docs/PHASE-29-ACCEPTANCE.md`](docs/PHASE-29-ACCEPTANCE.md) — Release Hardening / 2.0 release-candidate certification
+- [`docs/PHASE-30-ACCEPTANCE.md`](docs/PHASE-30-ACCEPTANCE.md) — Signal Earth 2.0 final release closure

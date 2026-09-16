@@ -186,6 +186,14 @@ Signal Earth **2.0.0-rc.1** closes the final technical release risks before prod
 
 The candidate is certified without changing providers, scientific semantics, persistence schemas or product workflows. Final `2.0.0` promotion remains a separate release-closure step.
 
-## Next planned phase
+## Phase 30 — Signal Earth 2.0
 
-- **Phase 30 — Signal Earth 2.0:** final production promotion, live verification and release closure.
+Status: **implemented and shipped**.
+
+Stable **2.0.0** promotion, stable-release integrity verification, exact-commit browser certification, canonical release notes, gated same-SHA production publication, retained-artifact packaging, SHA-256 release checksum, immutable `v2.0.0` tag/release creation and final GitHub Pages/live release closure.
+
+Phase 30 is release-only. It changes no providers, scientific semantics, persistence schemas, observer privacy rules or product workflows.
+
+## Roadmap status
+
+The Signal Earth Phase 0–30 development roadmap is complete with **Signal Earth 2.0.0**. Future maintenance is versioned product maintenance rather than continuation of the 0–30 build roadmap.
