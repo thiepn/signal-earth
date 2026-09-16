@@ -3,6 +3,7 @@ import type { EarthquakeRecord } from '../seismic/types';
 import type { NaturalEventRecord } from '../natural-events/types';
 import type { SatelliteRecord, SatelliteTelemetry } from '../orbit/types';
 import { hideSignalHoverPreview, showSignalHoverPreview } from '../../ui/hoverPreviewDom';
+import { LazyFeatureBoundary } from '../../ui/components/LazyFeatureBoundary';
 import type { GlobeViewportHandle, GlobeViewportQuality } from './GlobeViewportBase';
 import type { GeoContextLabel } from './geoContext';
 
@@ -77,19 +78,21 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
   }, [props.onGeoContextNavigate]);
 
   return (
-    <Suspense fallback={<div className="globe-canvas globe-canvas--boot" role="status" aria-label="Loading interactive Earth" />}>
-      <LazyBaseGlobeViewport
-        {...props}
-        ref={setRef}
-        onGlobeClick={(coordinates) => { hideSignalHoverPreview(); props.onGlobeClick?.(coordinates); }}
-        onEarthquakeClick={(earthquake) => { hideSignalHoverPreview(); props.onEarthquakeClick?.(earthquake); }}
-        onNaturalEventClick={(event) => { hideSignalHoverPreview(); props.onNaturalEventClick?.(event); }}
-        onSatelliteClick={(satellite, telemetry) => { hideSignalHoverPreview(); props.onSatelliteClick?.(satellite, telemetry); }}
-        onEarthquakeHover={onEarthquakeHover}
-        onNaturalEventHover={onNaturalEventHover}
-        onSatelliteHover={onSatelliteHover}
-        onGeoContextNavigate={onGeoContextNavigate}
-      />
-    </Suspense>
+    <LazyFeatureBoundary featureName="3D globe" className="globe-canvas" detail="The core WebGL renderer bundle could not be downloaded or initialized. Search and other shell tools remain available; reload to retry the globe.">
+      <Suspense fallback={<div className="globe-canvas globe-canvas--boot" role="status" aria-label="Loading interactive Earth" />}>
+        <LazyBaseGlobeViewport
+          {...props}
+          ref={setRef}
+          onGlobeClick={(coordinates) => { hideSignalHoverPreview(); props.onGlobeClick?.(coordinates); }}
+          onEarthquakeClick={(earthquake) => { hideSignalHoverPreview(); props.onEarthquakeClick?.(earthquake); }}
+          onNaturalEventClick={(event) => { hideSignalHoverPreview(); props.onNaturalEventClick?.(event); }}
+          onSatelliteClick={(satellite, telemetry) => { hideSignalHoverPreview(); props.onSatelliteClick?.(satellite, telemetry); }}
+          onEarthquakeHover={onEarthquakeHover}
+          onNaturalEventHover={onNaturalEventHover}
+          onSatelliteHover={onSatelliteHover}
+          onGeoContextNavigate={onGeoContextNavigate}
+        />
+      </Suspense>
+    </LazyFeatureBoundary>
   );
 });
