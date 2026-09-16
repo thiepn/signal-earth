@@ -1,0 +1,119 @@
+.provider-health-section {
+  min-width: 0;
+}
+
+.provider-health-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.provider-health-row {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--se-line);
+  border-radius: 10px;
+  background: rgba(255,255,255,.018);
+}
+
+.provider-health-main {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
+}
+
+.provider-health-main > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.provider-health-main strong {
+  font-size: .71rem;
+  font-weight: 620;
+}
+
+.provider-health-main small {
+  overflow-wrap: anywhere;
+  color: var(--se-dim);
+  font-size: .6rem;
+  line-height: 1.4;
+}
+
+.provider-health-dot {
+  width: 6px;
+  height: 6px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--se-dim);
+}
+
+.provider-health-row--live .provider-health-dot,
+.provider-health-row--cached .provider-health-dot {
+  background: var(--se-success);
+  box-shadow: 0 0 8px rgba(152,244,199,.38);
+}
+
+.provider-health-row--partial .provider-health-dot,
+.provider-health-row--stale .provider-health-dot {
+  background: var(--se-warning);
+}
+
+.provider-health-row--offline .provider-health-dot,
+.provider-health-row--error .provider-health-dot {
+  background: var(--se-danger);
+}
+
+.provider-health-metrics {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) repeat(3, auto);
+  gap: 7px;
+  align-items: center;
+  color: var(--se-dim);
+  font: 550 .5rem/1 var(--se-mono);
+  letter-spacing: .035em;
+}
+
+.provider-health-state {
+  color: var(--se-muted);
+  font-weight: 700;
+  letter-spacing: .07em;
+}
+
+.provider-health-row--live .provider-health-state,
+.provider-health-row--cached .provider-health-state { color: var(--se-success); }
+.provider-health-row--partial .provider-health-state,
+.provider-health-row--stale .provider-health-state { color: var(--se-warning); }
+.provider-health-row--offline .provider-health-state,
+.provider-health-row--error .provider-health-state { color: var(--se-danger); }
+
+.provider-health-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.provider-health-flags span {
+  padding: 4px 6px;
+  border: 1px solid var(--se-line);
+  border-radius: 999px;
+  color: var(--se-muted);
+  font: 650 .48rem/1 var(--se-mono);
+  letter-spacing: .05em;
+}
+
+.provider-overall--good { color: var(--se-success); }
+.provider-overall--warning { color: var(--se-warning); }
+.provider-overall--error,
+.provider-overall--offline { color: var(--se-danger); }
+
+@media (max-width: 760px) {
+  .provider-health-row { padding: 11px; }
+  .provider-health-metrics {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 10px;
+    line-height: 1.25;
+  }
+}
