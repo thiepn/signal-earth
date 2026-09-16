@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'signal-earth-v1.0.0';
+const CACHE_VERSION = '__SIGNAL_EARTH_CACHE_VERSION__';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const GENERATED_PRECACHE = /*__SIGNAL_EARTH_PRECACHE__*/[];
@@ -7,6 +7,7 @@ const APP_SHELL = [...new Set([
   './',
   './index.html',
   './manifest.webmanifest',
+  './release.json',
   './earth/earth-day-2k.webp',
   './earth/earth-city-lights-2k.webp',
   './earth/earth-signal-2k.webp',
@@ -15,13 +16,20 @@ const APP_SHELL = [...new Set([
 ])].map(scopedUrl);
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(STATIC_CACHE).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
+  // Do not force an update over an already-open release. A newly installed
+  // worker waits naturally, preventing an old page from being controlled by a
+  // worker that has already deleted the old release's lazy chunks.
+  event.waitUntil(caches.open(STATIC_CACHE).then((cache) => cache.addAll(APP_SHELL)));
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((key) => key.startsWith('signal-earth-') && ![STATIC_CACHE, RUNTIME_CACHE].includes(key)).map((key) => caches.delete(key)));
+    await Promise.all(
+      keys
+        .filter((key) => key.startsWith('signal-earth-') && ![STATIC_CACHE, RUNTIME_CACHE].includes(key))
+        .map((key) => caches.delete(key)),
+    );
     await self.clients.claim();
   })());
 });
@@ -36,7 +44,7 @@ async function cacheFirst(request) {
   const response = await fetch(request);
   if (isCacheableResponse(response)) {
     const cache = await caches.open(RUNTIME_CACHE);
-    cache.put(request, response.clone());
+    await cache.put(request, response.clone());
   }
   return response;
 }
@@ -46,7 +54,7 @@ async function navigationFallback(request) {
     const response = await fetch(request);
     if (isCacheableResponse(response)) {
       const cache = await caches.open(RUNTIME_CACHE);
-      cache.put(request, response.clone());
+      await cache.put(request, response.clone());
     }
     return response;
   } catch {
@@ -74,5 +82,7 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('message', (event) => {
+  // Retained for an explicit future update UI. Phase 29 no longer invokes this
+  // automatically during install.
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
