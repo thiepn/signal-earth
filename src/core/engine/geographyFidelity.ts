@@ -1,7 +1,8 @@
 export const GEOGRAPHY_DETAIL_PATH = 'data/natural-earth-50m-countries.geojson';
 export const GEOGRAPHY_FALLBACK_PATH = 'data/natural-earth-lowres.geojson';
 
-// Geographic shape is a fidelity invariant. Performance profiles may lower
-// framebuffer/effect cost, but they must not coarsen these angular surfaces.
+// The base sphere stays smooth regardless of the effects tier. Country and
+// coastline shape comes from the untouched 1:50m source vertices; the polygon
+// cap curvature only controls interior sphere tessellation, not boundary detail.
 export const GLOBE_CURVATURE_DEGREES = 2;
-export const LAND_CURVATURE_DEGREES = 1;
+export const LAND_CURVATURE_DEGREES = 5;
