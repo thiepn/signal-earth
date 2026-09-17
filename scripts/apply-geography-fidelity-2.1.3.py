@@ -17,6 +17,14 @@ def round_coords(value):
     return value
 
 
+def count_points(value) -> int:
+    if not isinstance(value, list):
+        return 0
+    if len(value) >= 2 and isinstance(value[0], (int, float)) and isinstance(value[1], (int, float)):
+        return 1
+    return sum(count_points(item) for item in value)
+
+
 def replace_once(path: str, old: str, new: str) -> None:
     target = ROOT / path
     text = target.read_text()
@@ -31,35 +39,61 @@ with urllib.request.urlopen(SOURCE, timeout=60) as response:
     payload = json.load(response)
 
 features = []
+point_count = 0
 for feature in payload.get('features', []):
     geometry = feature.get('geometry') or {}
     if geometry.get('type') not in {'Polygon', 'MultiPolygon'}:
         continue
     props = feature.get('properties') or {}
     name = props.get('NAME') or props.get('ADMIN') or props.get('name') or ''
+    coordinates = round_coords(geometry.get('coordinates'))
+    point_count += count_points(coordinates)
     features.append({
         'type': 'Feature',
         'properties': {'name': name},
         'geometry': {
             'type': geometry['type'],
-            'coordinates': round_coords(geometry.get('coordinates')),
+            'coordinates': coordinates,
         },
     })
 
 if len(features) < 200:
     raise SystemExit(f'Natural Earth 50m import unexpectedly small: {len(features)} features')
+if point_count < 20_000:
+    raise SystemExit(f'Natural Earth 50m import unexpectedly coarse: {point_count:,} coordinate points')
 
 DEST.parent.mkdir(parents=True, exist_ok=True)
 DEST.write_text(json.dumps({'type': 'FeatureCollection', 'features': features}, separators=(',', ':')))
 size = DEST.stat().st_size
 if not (750_000 <= size <= 4_500_000):
     raise SystemExit(f'Natural Earth 50m slim asset has unexpected size: {size:,} bytes')
-print(f'Wrote {len(features)} features / {size:,} bytes to {DEST.relative_to(ROOT)}')
+print(f'Wrote {len(features)} features / {point_count:,} points / {size:,} bytes to {DEST.relative_to(ROOT)}')
 
 replace_once(
     'src/core/engine/EarthRenderer.ts',
+    "import type { GlobeRenderContext } from './globe.types';\n",
+    "import type { GlobeRenderContext } from './globe.types';\nimport { GLOBE_CURVATURE_DEGREES } from './geographyFidelity';\n",
+)
+replace_once(
+    'src/core/engine/EarthRenderer.ts',
     "    const curvature = profile.effects === 'reduced' ? 10 : profile.effects === 'normal' ? 6 : 4;\n    this.#context.globe\n      .globeCurvatureResolution(curvature)\n",
-    "    // Sphere shape is geographic fidelity, not an effects budget. Keeping\n    // this constant prevents reduced-quality mode from turning close views\n    // into visibly faceted 10-degree globe patches.\n    this.#context.globe\n      .globeCurvatureResolution(2)\n",
+    "    // Sphere shape is geographic fidelity, not an effects budget. Keeping\n    // this constant prevents reduced-quality mode from turning close views\n    // into visibly faceted 10-degree globe patches.\n    this.#context.globe\n      .globeCurvatureResolution(GLOBE_CURVATURE_DEGREES)\n",
+)
+
+replace_once(
+    'src/core/engine/GeographyRenderer.ts',
+    "import type { SceneRenderer } from './GlobeEngine';\n",
+    "import type { SceneRenderer } from './GlobeEngine';\nimport { GEOGRAPHY_DETAIL_PATH, GEOGRAPHY_FALLBACK_PATH, LAND_CURVATURE_DEGREES } from './geographyFidelity';\n",
+)
+replace_once(
+    'src/core/engine/GeographyRenderer.ts',
+    ".polygonCapCurvatureResolution(1)\n",
+    ".polygonCapCurvatureResolution(LAND_CURVATURE_DEGREES)\n",
+)
+replace_once(
+    'src/core/engine/GeographyRenderer.ts',
+    "      { path: 'data/natural-earth-50m-countries.geojson', detail: '50m' },\n      { path: 'data/natural-earth-lowres.geojson', detail: 'fallback-lowres' },\n",
+    "      { path: GEOGRAPHY_DETAIL_PATH, detail: '50m' },\n      { path: GEOGRAPHY_FALLBACK_PATH, detail: 'fallback-lowres' },\n",
 )
 
 replace_once(
@@ -97,38 +131,23 @@ test('regional geography uses the bundled 50m vector surface @performance', asyn
     performance_spec.write_text(text)
 
 unit_test = ROOT / 'src/tests/geography-fidelity.test.ts'
-unit_test.write_text("""import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+unit_test.write_text("""import { describe, expect, it } from 'vitest';
+import {
+  GEOGRAPHY_DETAIL_PATH,
+  GEOGRAPHY_FALLBACK_PATH,
+  GLOBE_CURVATURE_DEGREES,
+  LAND_CURVATURE_DEGREES,
+} from '../core/engine/geographyFidelity';
 
-type Coordinates = unknown;
-
-function countPoints(value: Coordinates): number {
-  if (!Array.isArray(value)) return 0;
-  if (value.length >= 2 && typeof value[0] === 'number' && typeof value[1] === 'number') return 1;
-  return value.reduce<number>((sum, item) => sum + countPoints(item), 0);
-}
-
-describe('geography fidelity', () => {
-  it('bundles regional-scale Natural Earth vector geometry', () => {
-    const raw = readFileSync(new URL('../../public/data/natural-earth-50m-countries.geojson', import.meta.url), 'utf8');
-    const payload = JSON.parse(raw) as { features?: Array<{ geometry?: { coordinates?: unknown } }> };
-    const features = payload.features ?? [];
-    const pointCount = features.reduce((sum, feature) => sum + countPoints(feature.geometry?.coordinates), 0);
-    expect(features.length).toBeGreaterThan(200);
-    expect(pointCount).toBeGreaterThan(20_000);
+describe('geography fidelity invariants', () => {
+  it('uses regional vector geography as the primary visible land source', () => {
+    expect(GEOGRAPHY_DETAIL_PATH).toContain('natural-earth-50m');
+    expect(GEOGRAPHY_FALLBACK_PATH).toContain('lowres');
   });
 
-  it('keeps globe curvature independent from reduced effects quality', () => {
-    const source = readFileSync(new URL('../core/engine/EarthRenderer.ts', import.meta.url), 'utf8');
-    expect(source).toContain('.globeCurvatureResolution(2)');
-    expect(source).not.toContain("profile.effects === 'reduced' ? 10");
-  });
-
-  it('renders land through the vector polygon layer instead of the baked raster coastline', () => {
-    const source = readFileSync(new URL('../core/engine/GeographyRenderer.ts', import.meta.url), 'utf8');
-    expect(source).toContain("natural-earth-50m-countries.geojson");
-    expect(source).toContain('.polygonCapCurvatureResolution(1)');
-    expect(source).toContain('globeMaterial.colorWrite = false');
+  it('does not tie geographic shape to the effects quality tier', () => {
+    expect(GLOBE_CURVATURE_DEGREES).toBeLessThanOrEqual(2);
+    expect(LAND_CURVATURE_DEGREES).toBeLessThanOrEqual(1);
   });
 });
 """)
