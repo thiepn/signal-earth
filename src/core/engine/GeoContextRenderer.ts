@@ -4,6 +4,7 @@ import { geoContextBand, selectGeoContextLabels, type GeoContextCountry, type Ge
 import type { GlobeRenderContext } from './globe.types';
 import type { SceneRenderer } from './GlobeEngine';
 import type { QualityProfile } from './QualityManager';
+import { REGIONAL_GEOGRAPHY_MAX_ALTITUDE } from './geographyFidelity';
 
 interface GeoJsonFeature {
   properties?: { name?: unknown };
@@ -125,7 +126,13 @@ export class GeoContextRenderer implements SceneRenderer {
   }
 
   update(timestamp: number): void {
-    if (!this.#context || timestamp - this.#lastUpdateAt < 500) return;
+    if (!this.#context) return;
+    // Detailed polygons own borders/coastlines at regional zoom. Keep the
+    // lightweight low-res context mesh for overview only.
+    if (this.#countryLines) {
+      this.#countryLines.visible = this.#context.globe.pointOfView().altitude > REGIONAL_GEOGRAPHY_MAX_ALTITUDE;
+    }
+    if (timestamp - this.#lastUpdateAt < 500) return;
     this.#lastUpdateAt = timestamp;
     this.#syncLabels();
   }
@@ -213,6 +220,7 @@ export class GeoContextRenderer implements SceneRenderer {
     const lines = new THREE.LineSegments(geometry, material);
     lines.name = 'signal-earth-country-boundaries';
     lines.renderOrder = 2;
+    lines.visible = this.#context.globe.pointOfView().altitude > REGIONAL_GEOGRAPHY_MAX_ALTITUDE;
     this.#context.scene.add(lines);
     this.#countryLineGeometry = geometry;
     this.#countryLineMaterial = material;

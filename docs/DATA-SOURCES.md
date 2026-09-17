@@ -80,14 +80,17 @@ Every normalized entity retains a `SourceRef`. The permanent Data Sources surfac
 
 ## Natural Earth — local visual assets
 
-Natural Earth public-domain low-resolution vector geometry is bundled/used to generate the Phase 1 project-local Earth textures and geographic context assets.
+Natural Earth public-domain geometry is bundled locally for cartographic presentation. The original low-resolution world geometry remains the lightweight overview/search/context fallback and the source for the Phase 1 project-local Earth textures. Signal Earth 2.1.3 additionally bundles a slimmed **1:50m admin-0 country geometry** asset for regional/local coastline and land rendering.
 
 Runtime behavior:
 
 - no map tile requests
 - no runtime Natural Earth network request
-- 2K texture is the low/medium default
+- 2K texture is the low/medium overview default
 - 4K texture is lazy-selected by the high quality profile
+- regional/local zoom activates the bundled 1:50m vector land surface and spatially culls it around the camera
+- performance quality may change framebuffer/effect cost but does not simplify the 1:50m coastline source vertices
+- low-resolution geometry remains an asset-failure fallback and overview context rather than the close-zoom visible coastline
 - decorative surface variation in the generated texture is not scientific data
 
 Courtesy attribution: **Made with Natural Earth — naturalearthdata.com**.

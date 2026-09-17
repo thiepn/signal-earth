@@ -6,13 +6,17 @@ Signal Earth is a static, browser-first observatory for Earth events, atmosphere
 
 ## Current status
 
-**Signal Earth 2.1.2 — Adaptive visual-quality correction** is the current production release on GitHub Pages.
+**Signal Earth 2.1.3 — Geography fidelity correction** is the current production release on GitHub Pages.
 
 Live deployment: **https://thiepn.dev/signal-earth/**
 
 The final product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Time 2.0 replay, Observatory UX 2.0, deterministic Signal Intelligence, Above Me 2.0, Orbit 2.0, Dynamic Briefings 2.0, Saved Worlds, shareable views, capture/recording, PWA/offline-shell support, progressive loading, cross-browser interaction hardening, Data Reliability 2.0, the Visual & Motion Finish presentation layer, Phase 29 release hardening, and Phase 30 exact-commit release closure.
 
-Version **2.1.2** is the current stable release. Its canonical GitHub Release is published only after the exact production SHA passes Verify Release, 7/7 Cross-browser QA and GitHub Pages deployment.
+Version **2.1.3** is the current stable release. Its canonical GitHub Release is published only after the exact production SHA passes Verify Release, 7/7 Cross-browser QA and GitHub Pages deployment.
+
+## 2.1.3 geography fidelity correction
+
+Signal Earth 2.1.3 replaces magnified low-resolution world geography with a bundled Natural Earth 1:50m regional vector surface at close zoom. Whole-Earth overview rendering stays lightweight, while regional/local views switch to detailed land polygons and a smooth ocean shell with spatial culling. The low-resolution border mesh is hidden whenever detailed geography is active, preventing coarse outlines from being drawn over the corrected coastline. See [`docs/RELEASE-2.1.3.md`](docs/RELEASE-2.1.3.md).
 
 ## 2.1.2 adaptive visual-quality correction
 

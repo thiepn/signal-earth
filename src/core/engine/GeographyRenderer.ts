@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { VisualMode } from '../../shared/types/layers';
 import type { GlobeRenderContext } from './globe.types';
 import type { SceneRenderer } from './GlobeEngine';
-import { GEOGRAPHY_DETAIL_PATH, GEOGRAPHY_FALLBACK_PATH, LAND_CURVATURE_DEGREES } from './geographyFidelity';
+import { GEOGRAPHY_DETAIL_PATH, GEOGRAPHY_FALLBACK_PATH, LAND_CURVATURE_DEGREES, REGIONAL_GEOGRAPHY_MAX_ALTITUDE } from './geographyFidelity';
 
 interface GeographyFeature {
   type?: string;
@@ -39,7 +39,6 @@ interface GeographyStyle {
   boundary: string;
 }
 
-const LOCAL_DETAIL_MAX_ALTITUDE = 0.9;
 const LOD_UPDATE_MS = 220;
 
 const STYLES: Record<VisualMode, GeographyStyle> = {
@@ -335,7 +334,7 @@ export class GeographyRenderer implements SceneRenderer {
   #syncLod(force = false): void {
     if (!this.#context || !this.#indexedFeatures.length) return;
     const pov = this.#context.globe.pointOfView();
-    const shouldUseDetail = pov.altitude <= LOCAL_DETAIL_MAX_ALTITUDE;
+    const shouldUseDetail = pov.altitude <= REGIONAL_GEOGRAPHY_MAX_ALTITUDE;
     if (!shouldUseDetail) {
       this.#setDetailActive(false);
       return;

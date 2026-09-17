@@ -3,6 +3,7 @@ import {
   GEOGRAPHY_DETAIL_PATH,
   GEOGRAPHY_FALLBACK_PATH,
   LAND_CURVATURE_DEGREES,
+  REGIONAL_GEOGRAPHY_MAX_ALTITUDE,
 } from '../core/engine/geographyFidelity';
 
 describe('geography fidelity invariants', () => {
@@ -13,5 +14,6 @@ describe('geography fidelity invariants', () => {
 
   it('keeps regional polygon fill tessellation bounded without simplifying coastline vertices', () => {
     expect(LAND_CURVATURE_DEGREES).toBeLessThanOrEqual(5);
+    expect(REGIONAL_GEOGRAPHY_MAX_ALTITUDE).toBe(0.9);
   });
 });
