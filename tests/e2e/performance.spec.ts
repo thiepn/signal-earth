@@ -79,3 +79,15 @@ test('runtime frame cadence stays responsive and UI avoids live backdrop blur @p
   expect(cadence.p95, JSON.stringify(cadence)).toBeLessThanOrEqual(45);
   expect(cadence.longFrameRate, JSON.stringify(cadence)).toBeLessThanOrEqual(0.10);
 });
+
+
+test('regional geography uses the bundled 50m vector surface @performance', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop', 'Geography fidelity gate runs once on Chromium desktop.');
+  await page.goto('./', { waitUntil: 'domcontentloaded' });
+  const canvas = page.locator('canvas');
+  await expect(canvas).toBeVisible();
+  await expect.poll(
+    async () => canvas.getAttribute('data-geography-detail'),
+    { timeout: 15_000, message: 'The rendered Earth must use bundled 1:50m vector geography rather than the low-res fallback.' },
+  ).toBe('50m');
+});

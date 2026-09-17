@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import type { CameraState } from '../../core/engine/camera.types';
 import { EarthRenderer } from '../../core/engine/EarthRenderer';
 import { GeoContextRenderer } from '../../core/engine/GeoContextRenderer';
+import { GeographyRenderer } from '../../core/engine/GeographyRenderer';
 import { AtmosphereRenderer } from '../../core/engine/AtmosphereRenderer';
 import { AuroraRenderer } from '../../core/engine/AuroraRenderer';
 import { GlobeEngine } from '../../core/engine/GlobeEngine';
@@ -269,6 +270,7 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
     engine.setReducedMotion(callbacksRef.current.reducedMotion);
     const earth = new EarthRenderer({ getSimulationTime: () => callbacksRef.current.getSimulationTime(), getVisualMode: () => callbacksRef.current.visualMode });
     const geoContext = new GeoContextRenderer({ getVisualMode: () => callbacksRef.current.visualMode, onNavigate: (label) => callbacksRef.current.onGeoContextNavigate?.(label) });
+    const geography = new GeographyRenderer({ getVisualMode: () => callbacksRef.current.visualMode });
     const atmosphere = new AtmosphereRenderer({ getSimulationTime: () => callbacksRef.current.getSimulationTime(), onStatus: (status) => callbacksRef.current.onAtmosphereStatus?.(status) });
     const aurora = new AuroraRenderer({ getSimulationTime: () => callbacksRef.current.getSimulationTime(), getVisualMode: () => callbacksRef.current.visualMode });
     const observer = new ObserverRenderer();
@@ -411,6 +413,9 @@ export const GlobeViewport = forwardRef<GlobeViewportHandle, GlobeViewportProps>
     try {
       engine.registerRenderer(earth);
       engine.registerRenderer(geoContext);
+      // Register after GeoContext: its legacy mount clears the polygon layer.
+      // Geography owns that layer from this point forward.
+      engine.registerRenderer(geography);
       engine.registerRenderer(atmosphere);
       engine.registerRenderer(aurora);
       engine.registerRenderer(observer);

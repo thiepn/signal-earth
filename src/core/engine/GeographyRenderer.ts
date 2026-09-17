@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { VisualMode } from '../../shared/types/layers';
 import type { GlobeRenderContext } from './globe.types';
 import type { SceneRenderer } from './GlobeEngine';
+import { GEOGRAPHY_DETAIL_PATH, GEOGRAPHY_FALLBACK_PATH, LAND_CURVATURE_DEGREES } from './geographyFidelity';
 
 interface GeographyFeature {
   type?: string;
@@ -159,7 +160,7 @@ export class GeographyRenderer implements SceneRenderer {
       .polygonCapMaterial(this.#landMaterial)
       .polygonSideMaterial(this.#landSideMaterial)
       .polygonAltitude(0.00165)
-      .polygonCapCurvatureResolution(1)
+      .polygonCapCurvatureResolution(LAND_CURVATURE_DEGREES)
       .polygonStrokeColor(() => style.boundary)
       .polygonLabel(() => '')
       .polygonsTransitionDuration(0)
@@ -211,8 +212,8 @@ export class GeographyRenderer implements SceneRenderer {
     this.#abort = controller;
 
     const sources = [
-      { path: 'data/natural-earth-50m-countries.geojson', detail: '50m' },
-      { path: 'data/natural-earth-lowres.geojson', detail: 'fallback-lowres' },
+      { path: GEOGRAPHY_DETAIL_PATH, detail: '50m' },
+      { path: GEOGRAPHY_FALLBACK_PATH, detail: 'fallback-lowres' },
     ] as const;
 
     for (const source of sources) {

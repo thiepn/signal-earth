@@ -3,6 +3,7 @@ import { greenwichMeanSiderealTimeRadians, solarCoordinates, type SolarCoordinat
 import type { VisualMode } from '../../shared/types/layers';
 import type { QualityProfile } from './QualityManager';
 import type { GlobeRenderContext } from './globe.types';
+import { GLOBE_CURVATURE_DEGREES } from './geographyFidelity';
 import type { SceneRenderer } from './GlobeEngine';
 
 function assetUrl(path: string): string {
@@ -179,9 +180,11 @@ export class EarthRenderer implements SceneRenderer {
     const textureChanged = this.#currentTexture !== profile.earthTexture;
     this.#currentTexture = profile.earthTexture;
     this.#astronomyIntervalMs = profile.effects === 'reduced' ? 1_000 : profile.effects === 'normal' ? 250 : 80;
-    const curvature = profile.effects === 'reduced' ? 10 : profile.effects === 'normal' ? 6 : 4;
+    // Sphere shape is geographic fidelity, not an effects budget. Keeping
+    // this constant prevents reduced-quality mode from turning close views
+    // into visibly faceted 10-degree globe patches.
     this.#context.globe
-      .globeCurvatureResolution(curvature)
+      .globeCurvatureResolution(GLOBE_CURVATURE_DEGREES)
       .showAtmosphere(profile.atmosphere !== 'basic');
     if (textureChanged || this.#currentMode === null) this.#applyBaseTexture();
 
