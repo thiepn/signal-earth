@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import type { VisualMode } from '../../shared/types/layers';
 import { geoContextBand, selectGeoContextLabels, type GeoContextCountry, type GeoContextLabel } from '../../features/globe/geoContext';
-import { GEOGRAPHY_DETAIL_PATH, GEOGRAPHY_FALLBACK_PATH } from './geographyFidelity';
 import type { GlobeRenderContext } from './globe.types';
 import type { SceneRenderer } from './GlobeEngine';
 import type { QualityProfile } from './QualityManager';
@@ -122,7 +121,7 @@ export class GeoContextRenderer implements SceneRenderer {
       })
       .polygonsData([]);
     this.#syncStyle();
-    void this.#loadCountries();
+    this.#loadCountries();
   }
 
   update(timestamp: number): void {
@@ -157,36 +156,31 @@ export class GeoContextRenderer implements SceneRenderer {
     this.#context = null;
   }
 
-  async #loadCountries(): Promise<void> {
+  #loadCountries(): void {
     if (!this.#context) return;
     this.#abort?.abort();
     const controller = new AbortController();
     this.#abort = controller;
-    const sources = [GEOGRAPHY_DETAIL_PATH, GEOGRAPHY_FALLBACK_PATH] as const;
-
-    for (const source of sources) {
-      try {
-        const url = new URL(source, document.baseURI).toString();
-        const response = await fetch(url, { cache: 'force-cache', signal: controller.signal });
+    const url = new URL('data/natural-earth-lowres.geojson', document.baseURI).toString();
+    fetch(url, { cache: 'force-cache', signal: controller.signal })
+      .then((response) => {
         if (!response.ok) throw new Error(`Natural Earth returned HTTP ${response.status}`);
-        const payload = await response.json() as { features?: GeoJsonFeature[] };
+        return response.json() as Promise<{ features?: GeoJsonFeature[] }>;
+      })
+      .then((payload) => {
         if (controller.signal.aborted || !this.#context) return;
-        const features = Array.isArray(payload.features)
+        this.#features = Array.isArray(payload.features)
           ? payload.features.filter((feature) => feature.geometry?.type === 'Polygon' || feature.geometry?.type === 'MultiPolygon')
           : [];
-        if (!features.length) throw new Error('Natural Earth payload contains no polygon features.');
-        this.#features = features;
         this.#countries = this.#features.map(representativePoint).filter((country): country is GeoContextCountry => country !== null);
         this.#rebuildCountryLines();
         this.#syncStyle();
         this.#lastLabelKey = '';
         this.#syncLabels();
-        return;
-      } catch {
-        if (controller.signal.aborted) return;
-      }
-    }
-    // Geographic context is presentation-only. Failure must never affect the observatory.
+      })
+      .catch(() => {
+        // Geographic context is presentation-only. Failure must never affect the observatory.
+      });
   }
 
   #rebuildCountryLines(): void {
