@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { QUALITY_PROFILES, QualityManager } from '../core/engine/QualityManager';
+import { EMERGENCY_LOW_PIXEL_RATIO, QUALITY_PROFILES, QualityManager } from '../core/engine/QualityManager';
 
-describe('2.1.1 performance emergency', () => {
+describe('adaptive performance quality', () => {
   it('keeps automatic quality within bounded GPU budgets', () => {
-    expect(QUALITY_PROFILES.low.pixelRatio).toBeLessThanOrEqual(0.5);
+    expect(QUALITY_PROFILES.low.pixelRatio).toBeGreaterThanOrEqual(0.7);
+    expect(QUALITY_PROFILES.low.pixelRatio).toBeLessThanOrEqual(0.8);
+    expect(EMERGENCY_LOW_PIXEL_RATIO).toBe(0.45);
     expect(QUALITY_PROFILES.medium.pixelRatio).toBeLessThanOrEqual(1.0);
     expect(QUALITY_PROFILES.high.pixelRatio).toBeLessThanOrEqual(1.4);
     expect(QUALITY_PROFILES.low.satelliteCap).toBeLessThanOrEqual(180);

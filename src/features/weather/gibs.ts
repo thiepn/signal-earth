@@ -37,7 +37,7 @@ export function gibsRequestCandidates(product: GibsProduct, timestamp: number): 
 export function qualityToGibsResolution(level: QualityLevel): { width: number; height: number } {
   if (level === 'high') return { width: 1536, height: 768 };
   if (level === 'medium') return { width: 1024, height: 512 };
-  return { width: 512, height: 256 };
+  return { width: 768, height: 384 };
 }
 
 export function buildGibsWmsUrl(product: GibsProduct, timestamp: number, width: number, height: number): string {

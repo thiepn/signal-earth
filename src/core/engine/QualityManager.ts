@@ -3,6 +3,8 @@ import type { PerformanceSample } from './FramePerformanceMonitor';
 export type QualityLevel = 'low' | 'medium' | 'high';
 export type QualityMode = 'auto' | 'manual';
 
+export const EMERGENCY_LOW_PIXEL_RATIO = 0.45;
+
 export interface QualityProfile {
   pixelRatio: number;
   earthTexture: '2k' | '4k';
@@ -14,12 +16,12 @@ export interface QualityProfile {
 
 export const QUALITY_PROFILES: Record<QualityLevel, QualityProfile> = {
   low: {
-    pixelRatio: 0.5,
+    pixelRatio: 0.75,
     earthTexture: '2k',
-    atmosphere: 'basic',
+    atmosphere: 'normal',
     satelliteCap: 180,
     effects: 'reduced',
-    starCount: 240,
+    starCount: 360,
   },
   medium: {
     pixelRatio: 1.0,
@@ -53,9 +55,10 @@ function initialAutoLevel(): QualityLevel {
   const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
 
   // Never guess High from CPU/RAM alone. Auto can promote only after sustained
-  // measured frame health. This avoids over-driving integrated GPUs, high-DPI
-  // displays, and browsers that do not expose deviceMemory.
-  if (memory <= 2 || cores <= 4 || coarsePointer || framebufferPixels > 5_500_000) return 'low';
+  // measured frame health. A high-DPI desktop should not start blurry merely
+  // because it has many framebuffer pixels; measured frame health decides that.
+  if (memory <= 2 || cores <= 4) return 'low';
+  if (coarsePointer && (memory <= 4 || cores <= 6 || framebufferPixels > 5_500_000)) return 'low';
   return 'medium';
 }
 
@@ -117,11 +120,12 @@ export class QualityManager {
     const { fps, p95FrameMs, longFrameRate } = sample;
     if (this.#mode !== 'auto' || !Number.isFinite(fps) || fps <= 0) return this.#level;
 
-    const lowFpsThreshold = this.#level === 'high' ? 52 : 48;
-    const p95Budget = this.#level === 'high' ? 23 : 27;
+    const lowFpsThreshold = this.#level === 'high' ? 50 : 40;
+    const p95Budget = this.#level === 'high' ? 25 : 34;
+    const longFrameBudget = this.#level === 'high' ? 0.08 : 0.12;
     const unhealthy = fps < lowFpsThreshold
       || (Number.isFinite(p95FrameMs) && p95FrameMs > p95Budget)
-      || (Number.isFinite(longFrameRate) && longFrameRate > 0.06);
+      || (Number.isFinite(longFrameRate) && longFrameRate > longFrameBudget);
 
     if (unhealthy && this.#level !== 'low') {
       this.#lowFpsStrikes += 1;
@@ -136,7 +140,7 @@ export class QualityManager {
     }
 
     this.#lowFpsStrikes = 0;
-    const healthyFpsThreshold = this.#level === 'low' ? 56 : 58;
+    const healthyFpsThreshold = this.#level === 'low' ? 54 : 58;
     const healthy = fps >= healthyFpsThreshold
       && (!Number.isFinite(p95FrameMs) || p95FrameMs <= 20)
       && (!Number.isFinite(longFrameRate) || longFrameRate <= 0.025);

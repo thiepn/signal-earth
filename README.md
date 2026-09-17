@@ -6,13 +6,17 @@ Signal Earth is a static, browser-first observatory for Earth events, atmosphere
 
 ## Current status
 
-**Signal Earth 2.1.1 — Performance emergency hotfix** is the current production release on GitHub Pages.
+**Signal Earth 2.1.2 — Adaptive visual-quality correction** is the current production release on GitHub Pages.
 
 Live deployment: **https://thiepn.dev/signal-earth/**
 
 The final product includes Signal Earth Now, five primary layers (Weather, Earthquakes, Natural Events, Orbit, Aurora), Time 2.0 replay, Observatory UX 2.0, deterministic Signal Intelligence, Above Me 2.0, Orbit 2.0, Dynamic Briefings 2.0, Saved Worlds, shareable views, capture/recording, PWA/offline-shell support, progressive loading, cross-browser interaction hardening, Data Reliability 2.0, the Visual & Motion Finish presentation layer, Phase 29 release hardening, and Phase 30 exact-commit release closure.
 
-Version **2.1.1** is the current stable release. Its canonical GitHub Release is published only after the exact production SHA passes Verify Release, 7/7 Cross-browser QA and GitHub Pages deployment.
+Version **2.1.2** is the current stable release. Its canonical GitHub Release is published only after the exact production SHA passes Verify Release, 7/7 Cross-browser QA and GitHub Pages deployment.
+
+## 2.1.2 adaptive visual-quality correction
+
+Signal Earth 2.1.2 keeps the structural performance work from 2.1.1 while correcting its overly aggressive image-quality reduction. Capable desktop hardware now boots at a sharp rendering tier instead of being forced Low by high framebuffer pixel count; preferred Low renders at 0.75 DPR with improved atmosphere, globe curvature, star density and weather imagery. A hidden emergency tier is reserved for genuinely severe measured frame health. Production QA now verifies both visual-resolution floor and sustained constrained-device cadence. See [`docs/RELEASE-2.1.2.md`](docs/RELEASE-2.1.2.md).
 
 ## 2.1.1 performance emergency
 

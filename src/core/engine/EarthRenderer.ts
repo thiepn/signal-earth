@@ -179,7 +179,7 @@ export class EarthRenderer implements SceneRenderer {
     const textureChanged = this.#currentTexture !== profile.earthTexture;
     this.#currentTexture = profile.earthTexture;
     this.#astronomyIntervalMs = profile.effects === 'reduced' ? 1_000 : profile.effects === 'normal' ? 250 : 80;
-    const curvature = profile.effects === 'reduced' ? 12 : profile.effects === 'normal' ? 6 : 4;
+    const curvature = profile.effects === 'reduced' ? 10 : profile.effects === 'normal' ? 6 : 4;
     this.#context.globe
       .globeCurvatureResolution(curvature)
       .showAtmosphere(profile.atmosphere !== 'basic');

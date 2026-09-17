@@ -1,5 +1,22 @@
 import { expect, test } from '@playwright/test';
 
+test('capable desktop does not boot into emergency-resolution rendering @performance', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop', 'Visual-resolution gate runs once on Chromium desktop.');
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'hardwareConcurrency', { configurable: true, get: () => 8 });
+    Object.defineProperty(navigator, 'deviceMemory', { configurable: true, get: () => 8 });
+  });
+  await page.goto('./', { waitUntil: 'domcontentloaded' });
+  const canvas = page.locator('canvas');
+  await expect(canvas).toBeVisible();
+  await page.waitForTimeout(1_500);
+  const ratio = await canvas.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 ? (element as HTMLCanvasElement).width / rect.width : 0;
+  });
+  expect(ratio).toBeGreaterThanOrEqual(0.9);
+});
+
 test('runtime frame cadence stays responsive and UI avoids live backdrop blur @performance', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop', 'Runtime cadence gate runs once on Chromium desktop.');
   test.setTimeout(35_000);

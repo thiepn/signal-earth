@@ -4,8 +4,8 @@ import type { EntityId, GeoCoordinates } from '../../shared/types/entities';
 import { altitudeKmToGlobeRadiusUnits, globeRadiusUnitsToAltitudeKm } from '../../shared/coordinates/geo';
 import { CameraController } from './CameraController';
 import type { CameraState } from './camera.types';
-import { FramePerformanceMonitor } from './FramePerformanceMonitor';
-import { QualityManager, type QualityProfile } from './QualityManager';
+import { FramePerformanceMonitor, type PerformanceSample } from './FramePerformanceMonitor';
+import { EMERGENCY_LOW_PIXEL_RATIO, QualityManager, type QualityProfile } from './QualityManager';
 import type { GlobeEngineMetrics, GlobePointOfView, GlobeRenderContext } from './globe.types';
 
 export interface SceneRenderer {
@@ -29,6 +29,15 @@ type CameraStateListener = (state: Readonly<CameraState>) => void;
 type WorldTargetProvider = () => THREE.Vector3 | null;
 
 const DEFAULT_POINT_OF_VIEW: GlobePointOfView = { lat: 18, lng: 8, altitude: 2.35 };
+
+const EMERGENCY_LOW_PROFILE: QualityProfile = {
+  pixelRatio: EMERGENCY_LOW_PIXEL_RATIO,
+  earthTexture: '2k',
+  atmosphere: 'basic',
+  satelliteCap: 120,
+  effects: 'reduced',
+  starCount: 180,
+};
 
 export class GlobeEngine {
   readonly #container: HTMLElement;
@@ -56,6 +65,9 @@ export class GlobeEngine {
   #unsubscribeCameraState: (() => void) | null = null;
   #followTargetProvider: WorldTargetProvider | null = null;
   #cameraFlight: { start: THREE.Vector3; end: THREE.Vector3; startedAt: number; durationMs: number } | null = null;
+  #emergencyLow = false;
+  #emergencyRecoveryStrikes = 0;
+  #emergencyActivatedAt = -Infinity;
 
   constructor(container: HTMLElement, options: GlobeEngineOptions = {}) {
     this.#container = container;
@@ -153,14 +165,18 @@ export class GlobeEngine {
         currentPointOfView: () => globe.pointOfView(),
       });
 
-      this.#unsubscribeQuality = this.#quality.subscribe((_level, profile) => {
-        this.#applyQuality(profile);
+      this.#unsubscribeQuality = this.#quality.subscribe((level, profile) => {
+        if (level !== 'low' || this.#quality.mode !== 'auto') {
+          this.#emergencyLow = false;
+          this.#emergencyRecoveryStrikes = 0;
+        }
+        this.#applyQuality(this.#effectiveQualityProfile(profile));
       });
       this.#unsubscribeCameraState = this.#cameraController.subscribe((state) => {
         for (const listener of this.#cameraStateListeners) listener(state);
       });
 
-      this.#applyQuality(this.#quality.profile);
+      this.#applyQuality(this.#effectiveQualityProfile());
       this.#setupResizeObserver();
       document.addEventListener('visibilitychange', this.#onVisibilityChange);
 
@@ -408,6 +424,49 @@ export class GlobeEngine {
     for (const rendererPlugin of this.#renderers.values()) rendererPlugin.applyQuality?.(profile);
   }
 
+  #effectiveQualityProfile(profile: QualityProfile = this.#quality.profile): QualityProfile {
+    if (this.#emergencyLow && this.#quality.mode === 'auto' && this.#quality.level === 'low') {
+      return EMERGENCY_LOW_PROFILE;
+    }
+    return profile;
+  }
+
+  #observeEmergencyLow(sample: PerformanceSample, level: string): void {
+    if (this.#quality.mode !== 'auto' || level !== 'low') {
+      if (this.#emergencyLow) {
+        this.#emergencyLow = false;
+        this.#emergencyRecoveryStrikes = 0;
+        this.#applyQuality(this.#quality.profile);
+      }
+      return;
+    }
+
+    const severe = sample.fps < 30
+      || sample.p95FrameMs > 55
+      || sample.longFrameRate > 0.18;
+
+    if (!this.#emergencyLow && severe) {
+      this.#emergencyLow = true;
+      this.#emergencyRecoveryStrikes = 0;
+      this.#emergencyActivatedAt = performance.now();
+      this.#applyQuality(EMERGENCY_LOW_PROFILE);
+      return;
+    }
+
+    if (!this.#emergencyLow) return;
+
+    const recovered = sample.fps >= 48
+      && sample.p95FrameMs <= 28
+      && sample.longFrameRate <= 0.08;
+    this.#emergencyRecoveryStrikes = recovered ? this.#emergencyRecoveryStrikes + 1 : 0;
+
+    if (this.#emergencyRecoveryStrikes >= 8 && performance.now() - this.#emergencyActivatedAt >= 20_000) {
+      this.#emergencyLow = false;
+      this.#emergencyRecoveryStrikes = 0;
+      this.#applyQuality(this.#quality.profile);
+    }
+  }
+
   #setupResizeObserver(): void {
     if (typeof ResizeObserver === 'undefined') {
       this.#usingWindowResize = true;
@@ -450,8 +509,15 @@ export class GlobeEngine {
         this.#lastMetrics = metrics;
         for (const listener of this.#metricsListeners) listener(metrics);
 
-        // Ignore startup compilation/texture decode when evaluating quality.
-        if (timestamp - this.#startedAt > 5_000) this.#quality.observePerformance(sample);
+        // Emergency scaling is allowed to react earlier for an already-Low
+        // constrained boot. Normal Auto tier changes still ignore the first five
+        // seconds of shader compilation/texture decode, but the emergency floor
+        // should settle before sustained-cadence measurement begins.
+        const runtimeAge = timestamp - this.#startedAt;
+        if (runtimeAge > 3_000) {
+          if (runtimeAge > 5_000) this.#quality.observePerformance(sample);
+          this.#observeEmergencyLow(sample, this.#quality.level);
+        }
       }
 
       this.#animationFrame = requestAnimationFrame(tick);
