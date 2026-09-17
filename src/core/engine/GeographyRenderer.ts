@@ -134,11 +134,12 @@ function longitudeIntersects(minLon: number, maxLon: number, centerLon: number, 
 }
 
 function selectLocalFeatures(indexed: IndexedFeature[], lat: number, lon: number, altitude: number): GeographyFeature[] {
-  // Wider windows near the LOD handoff keep the entire visible region covered;
-  // close views intentionally triangulate only a small neighbourhood.
-  const latPadding = Math.min(44, Math.max(16, 12 + altitude * 34));
-  const latitudeScale = Math.max(0.35, Math.cos(lat * Math.PI / 180));
-  const lonPadding = Math.min(95, (latPadding * 1.45) / latitudeScale);
+  // Keep enough off-screen margin for camera movement without triangulating a
+  // hemisphere. Coastline vertices remain untouched; only the active countries
+  // are culled from the regional working set.
+  const latPadding = Math.min(30, Math.max(11, 8 + altitude * 21));
+  const latitudeScale = Math.max(0.4, Math.cos(lat * Math.PI / 180));
+  const lonPadding = Math.min(58, (latPadding * 1.1) / latitudeScale);
   const minLat = Math.max(-90, lat - latPadding);
   const maxLat = Math.min(90, lat + latPadding);
 
