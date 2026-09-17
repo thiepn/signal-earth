@@ -80,14 +80,34 @@ test('runtime frame cadence stays responsive and UI avoids live backdrop blur @p
   expect(cadence.longFrameRate, JSON.stringify(cadence)).toBeLessThanOrEqual(0.10);
 });
 
-
-test('regional geography uses the bundled 50m vector surface @performance', async ({ page }, testInfo) => {
+test('regional geography activates bundled 50m vectors near Istanbul @performance', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop', 'Geography fidelity gate runs once on Chromium desktop.');
+  test.setTimeout(40_000);
   await page.goto('./', { waitUntil: 'domcontentloaded' });
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
   await expect.poll(
     async () => canvas.getAttribute('data-geography-detail'),
-    { timeout: 15_000, message: 'The rendered Earth must use bundled 1:50m vector geography rather than the low-res fallback.' },
+    { timeout: 15_000, message: 'The bundled 1:50m source must load instead of the low-res fallback.' },
   ).toBe('50m');
+
+  // Whole-globe startup must stay cheap: detailed polygons are a regional LOD,
+  // not a 100k-point triangulation tax paid before the user zooms in.
+  await expect(canvas).toHaveAttribute('data-geography-lod', 'overview');
+
+  await page.keyboard.press('/');
+  const input = page.getByRole('textbox', { name: 'Search Signal Earth' });
+  await expect(input).toBeFocused();
+  await input.fill('Istanbul');
+  const istanbul = page.getByRole('option').filter({ hasText: /Istanbul/i }).first();
+  await expect(istanbul).toBeVisible();
+  await istanbul.click();
+
+  await expect.poll(
+    async () => canvas.getAttribute('data-geography-lod'),
+    { timeout: 15_000, message: 'Regional navigation must switch to the detailed vector surface.' },
+  ).toBe('regional-50m');
+  const polygonCount = Number(await canvas.getAttribute('data-geography-polygons'));
+  expect(polygonCount).toBeGreaterThan(0);
+  expect(polygonCount).toBeLessThan(100);
 });
