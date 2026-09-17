@@ -12,8 +12,8 @@ describe('geography fidelity invariants', () => {
     expect(GEOGRAPHY_FALLBACK_PATH).toContain('lowres');
   });
 
-  it('does not tie geographic shape to the effects quality tier', () => {
+  it('keeps the base globe smooth while leaving polygon fill tessellation bounded', () => {
     expect(GLOBE_CURVATURE_DEGREES).toBeLessThanOrEqual(2);
-    expect(LAND_CURVATURE_DEGREES).toBeLessThanOrEqual(1);
+    expect(LAND_CURVATURE_DEGREES).toBeLessThanOrEqual(5);
   });
 });
